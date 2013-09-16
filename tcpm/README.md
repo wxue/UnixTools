@@ -10,9 +10,9 @@ According to Jan Schaumann(instructor): "The objective of this assignment
 is for you to write your first program and get comfortable developing a tool 
 from a given specification."
 
-[Original Assignment:](http://www.cs.stevens.edu/~jschauma/631A/f13-hw2.html)
+[Original Assignment](http://www.cs.stevens.edu/~jschauma/631A/f13-hw2.html)
 
-[Github:](https://github.com/jschauma/cs631apue)
+[Github](https://github.com/jschauma/cs631apue)
 
 Difference To tcp
 ---------
