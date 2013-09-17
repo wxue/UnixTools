@@ -1,4 +1,4 @@
-/* $NetBSD: tcpm.c,v 0.01 2013/09/15 22:02:03 weiyu Exp $ */
+/* $NetBSD: tcpm.c,v 0.02 2013/09/17 00:25:22 Weiyu Exp $ */
  
 /* Copyright (c) 2013, Weiyu Xue
  * All rights reserved.
@@ -54,22 +54,32 @@ checkArgc(int argc){
   }
 }
 
+char *
+nameFilter(char *file_name){
+  char *p_name = strtok(file_name,"/");
+  while (p_name != NULL) {  
+    file_name = p_name;  
+    p_name = strtok(NULL,"/");
+  }  
+  return file_name;
+}
+
 int
 createFile(char *src_file, char *trgt_file) {
   int fd;
 
-/* 
- * Set O_TRUNC: If the file exists and is a regular file, and the file is  
- * successfully opened O_RDWR or O_WRONLY, its length is truncated to 0 and  
- * the mode and owner are unchanged.
- */
+  /* 
+   * Set O_TRUNC: If the file exists and is a regular file, and the file is  
+   * successfully opened O_RDWR or O_WRONLY, its length is truncated to 0 and  
+   * the mode and owner are unchanged.
+   */
   if ((fd = open(trgt_file, O_RDWR | O_CREAT | O_TRUNC, 
                  S_IRUSR | S_IWUSR)) == -1) {
-/* 
- * If trget_file is a directory, give it the same name as  
- * its source file.
- */
- /* Errno 21: Can't open a directory. */
+    /* 
+     * If trget_file is a directory, give it the same name as  
+     * its source file.
+     */
+     /* Errno 21: Can't open a directory. */
     if (errno == 21){
       (void)close(fd);
       strcpy(trgt_file+strlen(trgt_file),"/");
@@ -119,42 +129,53 @@ int
 main(int argc, char *argv[])
 {
   int fd_src, fd_trgt, file_size;
+  char *file_name;
   char *addr_src; char *addr_trgt;
-/* This works on BSD, but not in the stdlib on Linux. */
+  /* This works on BSD, but not in the stdlib on Linux. */
   // setprogname(argv[0]);
 
-/* Check the command and show the correct usage if meets any error */
+  /* Check the command and show the correct usage if meets any error */
   checkArgc(argc);
 
-/*
- * Create a target file in the directory as declared in the command or
- * in the current directory if path is given. 
- * Then get its file descriptor.
- */
-  fd_trgt = createFile(argv[1], argv[2]);
+  /* Set file name.(Avoiding change argv[1])*/
+  int length;
+  length = strlen(argv[1]);
+  char changeable_name[length];
+  strcpy(changeable_name, argv[1]);
+  file_name = changeable_name;
 
-/* Open the source file and get its file descriptor*/
+  /* Get the source file name only.(Get rid of its path.) */
+  file_name = nameFilter(file_name);
+
+  /*
+   * Create a target file in the directory as declared in the command or
+   * in the current directory if path is given. 
+   * Then get its file descriptor.
+   */
+  fd_trgt = createFile(file_name, argv[2]);
+
+  /* Open the source file and get its file descriptor*/
   fd_src = openFile(argv[1]);
 
-/* Get file size. */
+  /* Get file size. */
   file_size = getSize(fd_src);
 
-/* Make the target file a hole file, same size with the source file.*/
+  /* Make the target file a hole file, same size with the source file.*/
   char buf[file_size];
   if (write(fd_trgt, buf, file_size) != file_size){
     perror("Error writing hole-target_file");
     return 1;
   }
 
-/* mmap both source file and target file. */
+  /* mmap both source file and target file. */
   addr_src = mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, fd_src, 0);
   addr_trgt = mmap(NULL, file_size, PROT_READ | PROT_WRITE, MAP_SHARED,
                    fd_trgt, 0);
 
-/* length + 1 for the string's end-char '\0' */
+  /* length + 1 for the string's end-char '\0' */
   memcpy(addr_trgt, addr_src, file_size+1);
 
-/* unmap the files */
+  /* unmap the files */
   munmap(addr_src, file_size);
   munmap(addr_trgt, file_size);
   return 0;

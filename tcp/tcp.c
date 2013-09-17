@@ -1,4 +1,4 @@
-/* $NetBSD: tcp.c,v 0.02 2013/09/13 17:52:03 weiyu Exp $ */
+/* $NetBSD: tcp.c,v 0.03 2013/09/17 00:25:22 Weiyu Exp $ */
  
 /* Copyright (c) 2013, Weiyu Xue
  * All rights reserved.
@@ -46,6 +46,7 @@
 
 #define BUFFSIZE 20480
 
+
 /*
  * Functions
  */
@@ -58,22 +59,32 @@ checkArgc(int argc){
   }
 }
 
+char *
+nameFilter(char *file_name){
+  char *p_name = strtok(file_name,"/");
+  while (p_name != NULL) {  
+    file_name = p_name;  
+    p_name = strtok(NULL,"/");
+  }  
+  return file_name;
+}
+
 int
 createFile(char *src_file, char *trgt_file) {
   int fd;
 
-/* 
- * Set O_TRUNC: If the file exists and is a regular file, and the file is  
- * successfully opened O_RDWR or O_WRONLY, its length is truncated to 0 and  
- * the mode and owner are unchanged.
- */
+  /* 
+   * Set O_TRUNC: If the file exists and is a regular file, and the file is  
+   * successfully opened O_RDWR or O_WRONLY, its length is truncated to 0 and  
+   * the mode and owner are unchanged.
+   */
   if ((fd = open(trgt_file, O_RDWR | O_CREAT | O_TRUNC, 
                  S_IRUSR | S_IWUSR)) == -1) {
-/* 
- * If trget_file is a directory, give it the same name as  
- * its source file.
- */
- /* Errno 21: Can't open a directory. */
+    /* 
+     * If trget_file is a directory, give it the same name as  
+     * its source file.
+     */
+     /* Errno 21: Can't open a directory. */
     if (errno == 21){
       (void)close(fd);
       strcpy(trgt_file+strlen(trgt_file),"/");
@@ -112,28 +123,41 @@ int
 main(int argc, char *argv[])
 {
   int fd_src, fd_trgt, n;
+  char *file_name;
   char buf[BUFFSIZE];
-  /* This works on BSD, but not in the stdlib on Linux. */
-  // setprogname(argv[0]);
 
-/* Check the command and show the correct usage if meets any error */
+  
+  /* This works on BSD, but not in the stdlib on Linux. */
+  setprogname(argv[0]);
+
+  /* Check the command and show the correct usage if meets any error */
   checkArgc(argc);
 
-/*
- * Create a target file in the directory as declared in the command or
- * in the current directory if path is given. 
- * Then get its file descriptor.
- */
-  fd_trgt = createFile(argv[1], argv[2]);
+  /* Set file name.(Avoiding change argv[1])*/
+  int length;
+  length = strlen(argv[1]);
+  char changeable_name[length];
+  strcpy(changeable_name, argv[1]);
+  file_name = changeable_name;
 
-/* Open the source file and get its file descriptor*/
+  /* Get the source file name only.(Get rid of its path.) */
+  file_name = nameFilter(file_name);
+ 
+  /*
+   * Create a target file in the directory as declared in the command or
+   * in the current directory if path is given. 
+   * Then get its file descriptor.
+   */
+  fd_trgt = createFile(file_name, argv[2]);
+
+  /* Open the source file and get its file descriptor*/
   fd_src = openFile(argv[1]);
 
-/*
- * Read from source file and write its content to
- * target file. Using buff to adjust the byte size of 
- * each read and write.
- */
+  /*
+   * Read from source file and write its content to
+   * target file. Using buff to adjust the byte size of 
+   * each read and write.
+   */
   while ((n = read(fd_src, buf, BUFFSIZE)) > 0 )
     if ( write(fd_trgt, buf, n) != n ) {
       fprintf(stderr, "write error\n");
