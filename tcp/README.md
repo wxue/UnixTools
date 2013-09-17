@@ -17,10 +17,10 @@ from a given specification."
 Modify .bash
 ---------
 
-For convenient and to makes it more like a command tool, you can add
+For convenience and to makes it more like a command tool, you can add
 the current path to .bash.
-Run the command below in the terminal: (replace "/currentpath/directory"
-(without the quote) with the directory path where this program located.)
+Run the command below in the terminal: (replace `/currentpath/directory`
+ with the directory path where this program located.)
 
 `export PATH=/currentpath/directory:$PATH`
 
@@ -29,7 +29,7 @@ You can use command:
 to check if it is added correctly.
 
 Don't worry, this changes the PATH temperately. So if you open a new terminal
-you need to do this again or write it into .bash permanently(not recommended).
+you need to do this again or write it into .bash permanently(not recommended in this case).
 
 SYNOPSIS
 ---------
