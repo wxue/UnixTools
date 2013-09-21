@@ -1,5 +1,5 @@
-Trivially Copy File
-=========
+# Trivially Copy File
+
 
 This program is written during the class CS631, Advanced Programming 
 in the UNIX Environment, Fall 2013, SIT.
@@ -14,32 +14,13 @@ from a given specification."
 
 [Github](https://github.com/jschauma/cs631apue)
 
-Modify .bash
----------
-
-For convenient and to makes it more like a command tool, you can add
-the current path to .bash.
-Run the command below in the terminal: (replace "/currentpath/directory"
-(without the quote) with the directory path where this program located.)
-
-`export PATH=/currentpath/directory:$PATH`
-
-You can use command:
-`echo $PATH`
-to check if it is added correctly.
-
-Don't worry, this changes the PATH temperately. So if you open a new terminal
-you need to do this again or write it into .bash permanently(not recommended).
-
-SYNOPSIS
----------
+## Synopsis
 
 `tcp source_file target_file`
 
 `tcp source_file ... target_directory`
 
-EXAMPLES
----------
+## Examples
 
 `tcp file1 file2`
 

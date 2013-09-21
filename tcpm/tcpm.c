@@ -132,7 +132,7 @@ main(int argc, char *argv[])
   char *file_name;
   char *addr_src; char *addr_trgt;
   /* This works on BSD, but not in the stdlib on Linux. */
-  // setprogname(argv[0]);
+  setprogname(argv[0]);
 
   /* Check the command and show the correct usage if meets any error */
   checkArgc(argc);
