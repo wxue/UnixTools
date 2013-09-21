@@ -39,7 +39,7 @@ In order to use these tools more "Unix-like" in a terminal, you can add the dire
 
   1. `export PATH=/tool_path/tool_directory:$PATH`
 
-    * Replace `/tool_path/tool_directory` with the path and the directory of the very tool(the executable file).
+    Replace `/tool_path/tool_directory` with the path and the directory of the very tool(the executable file).
 
   2. Use command `echo $PATH` to check if it is added correctly.
 
