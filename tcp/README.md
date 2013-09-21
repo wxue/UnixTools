@@ -14,7 +14,29 @@ from a given specification."
 
 [Github](https://github.com/jschauma/cs631apue)
 
+<<<<<<< HEAD
 ## Synopsis
+=======
+Modify .bash
+---------
+
+For convenience and to makes it more like a command tool, you can add
+the current path to .bash.
+Run the command below in the terminal: (replace `/currentpath/directory`
+ with the directory path where this program located.)
+
+`export PATH=/currentpath/directory:$PATH`
+
+You can use command:
+`echo $PATH`
+to check if it is added correctly.
+
+Don't worry, this changes the PATH temperately. So if you open a new terminal
+you need to do this again or write it into .bash permanently(not recommended in this case).
+
+SYNOPSIS
+---------
+>>>>>>> 17b5f5d336ac51223bb0f8b3a4901bec2bc3aa56
 
 `tcp source_file target_file`
 
