@@ -1,4 +1,4 @@
-/* $NetBSD: ls.c,v 0.01 2013/09/27 20:50:02 Weiyu Exp $ */
+/* $NetBSD: ls.c,v 0.02 2013/10/05 20:10:00 Weiyu Exp $ */
  
 /* Copyright (c) 2013, Weiyu Xue
  * All rights reserved.
@@ -36,9 +36,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <err.h>
 #include <errno.h>
 #include <string.h>
 #include <fts.h>
+
+#include "print.h"
 
 /*
  * Flags
@@ -127,7 +130,6 @@ int flag_1 = 0;
 /*
  * Functions
  */
-
 void
 usage()
 {
@@ -138,44 +140,54 @@ usage()
 }
 
 void
-traverse(char *argv, int fts_options)
+traverse(int argc, char *argv[], int fts_options)
 {
   FTS *ftsp;
   FTSENT *p, *chp;
 
   if ((ftsp = fts_open(argv, fts_options, NULL)) == NULL) {
-    // fprintf(stderr, "");
+    fprintf(stderr, "No such file or directory");
     exit(EXIT_FAILURE);
   }
+  
   chp = fts_children(ftsp, 0);
-  printf("chp: %s\n", chp);
   if (chp == NULL) {
     printf("no files");
     exit(EXIT_SUCCESS);
   }
-  
+
   while ((p = fts_read(ftsp)) != NULL) {
     switch (p->fts_info) {
+    case FTS_DOT:
+      if (flag_A)
+        break;
+      /* FALLTHROUGH */ 
+    case FTS_SL:
+      /* FALLTHROUGH */
     case FTS_D:
+      /* FALLTHROUGH */
+    case FTS_F:
       if (p->fts_level != 1)
         break;
-      printf("%s\n", p->fts_name);
-      break;
-    case FTS_F:
       if (!flag_a && p->fts_name[0] == '.')
         break;
+      if (flag_l) {
+        printpermissions(p->fts_statp->st_mode);
+        printf("  %2d", p->fts_statp->st_nlink);
+        printownername(p->fts_statp->st_uid);
+        printgroupname(p->fts_statp->st_gid);
+        printf("%6lld ", p->fts_statp->st_size);
+        printmtime(p->fts_statp->st_mtime);
+      }
       printf("%s\n", p->fts_name);
       break;
-    case FTS_DOT:
-      if (p->fts_level != 1)
-        break;
-      printf("%s\n", p->fts_name);
-      break;
+
     default:
       break;
     }
   }
   fts_close(ftsp);
+
   exit(EXIT_SUCCESS);
 }
 
@@ -195,15 +207,21 @@ main(int argc, char *argv[])
   setprogname(argv[0]);
 
    // "−AacdFfhiklnqRrSstuw1"
-  while ((ch = getopt(argc, argv, "−a")) != -1) {
+  while ((ch = getopt(argc, argv, "−Aal")) != -1) {
     switch (ch) {   /* Indent the switch. */
-    // case 'A':    Don't indent the case. 
-    //   flag_A = 1;
-    //   /* FALLTHROUGH */
+    case 'A':
+      flag_A = 1;
+      break;
+
     case 'a':
       flag_a = 1;
       fts_options |= FTS_SEEDOT;
       break;
+
+    case 'l':
+      flag_l = 1;
+      break;
+
     // case '1':
     //   errno = 0;
     //   num = strtol(optarg, &ep, 10);
@@ -212,6 +230,7 @@ main(int argc, char *argv[])
     //     errx(1, "illegal number -- %s", optarg);
     //   break;
     // case 'd':
+      /* FALLTHROUGH */
   
     default:
     case '?':
@@ -221,27 +240,16 @@ main(int argc, char *argv[])
   argc -= optind;
   argv += optind;
 
-  // printf("%s\n", *argv);
-  // printf("flag_a = %d\n", flag_a);
-
   if (*argv == NULL)
     *argv = "./";
 
-  traverse(argv, fts_options);
+  /* Override Flags */
+  if (flag_A)
+  {
+    flag_a = 1;
+  }
 
-  // /* check the target directory whether is given or not */
-  // if (*argv == NULL)
-  //   dp = opendir("./");
-  // else
-  //   dp = opendir(*argv);
+  traverse(argc, argv, fts_options);
 
-  // if (dp != NULL) {
-  //     while ((dirp = readdir(dp)) != NULL ) {
-  //       puts(dirp->d_name);
-  //     }
-  //     (void) closedir (dp);
-  //   }
-  // else
-  //   perror ("Couldn't open the directory");
   return 0;
 }
