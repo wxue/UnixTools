@@ -8,7 +8,7 @@ CC = gcc
 CFLAGS  = -Wall
 
 # .h files
-# INCLUDES = ./ls.h
+# INCLUDES = ./
 INCLUDES = 
 
 # library paths(for those not under the path /usr/lib)
@@ -22,7 +22,7 @@ LFLAGS =
 LIBS = 
 
 # C source files
-SRCS = ls.c
+SRCS = ls.c print.c
 
 #
 # Below we are replacing the suffix .c of all words in the macro SRCS
