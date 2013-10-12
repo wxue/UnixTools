@@ -22,7 +22,7 @@ LFLAGS =
 LIBS = 
 
 # C source files
-SRCS = ls.c print.c
+SRCS = ls.c print.c cmp.c
 
 #
 # Below we are replacing the suffix .c of all words in the macro SRCS
