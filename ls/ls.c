@@ -42,90 +42,32 @@
 #include <fts.h>
 
 #include "print.h"
+#include "cmp.h"
 
 /*
  * Flags
  */
 
-/* List all entries except for ‘.’ and ‘..’. Always set for the super-user. */
 int flag_A = 0; 
-
-/* Include directory entries whose names begin with a dot ( ‘.’ ) . */
 int flag_a = 0; 
-
-/* Use time when ﬁle status was last changed, instead of time of last 
-   modiﬁcation of the ﬁle for sorting ( −t ) or printing ( −l ) . */
 int flag_c = 0; 
-
-/* Directories are listed as plain ﬁles (not searched recursively) and symbolic
-   links in the argument list are not indirected through. */
 int flag_d = 0; 
-
-/* Display a slash ( ‘/’ ) immediately after each pathname that is a directory,
-   an asterisk ( ‘∗’) after each that is executable, an at sign ( ‘@’ ) after
-   each symbolic link, a percent sign ( ‘%’ ) after each whiteout, an equal
-   sign ( ‘=’ ) after each socket, and a vertical bar ( ‘|’ ) after each that 
-   is a FIFO. */
 int flag_F = 0; 
-
-/* Output is not sorted. */
 int flag_f = 0; 
-
-/* Modiﬁes the −s and −l options, causing the sizes to be reported in bytes
-   displayed in a human readable format. Overrides −k. */
 int flag_h = 0; 
-
-/* For each ﬁle, print the ﬁle’s ﬁle serial number (inode number). */
 int flag_i = 0; 
-
-/* Modiﬁes the −s option, causing the sizes to be reported in kilobytes. The 
-   rightmost of the −k and -h ﬂags overrides the previous ﬂag. See also −h. */
 int flag_k = 0; 
-
-/* (The lowercase letter “ell”). List in long format. (See below.) A total sum
-   for all the ﬁle sizes is output on a line before the long listing. */
 int flag_l = 0; 
-
-/* The same as −l, except that the owner and group IDs are displayed
-   numerically rather than converting to a owner or group name. */
 int flag_n = 0; 
-
-/* Force printing of non-printable characters in ﬁle names as the character
-   ‘?’; this is the default when output is to a terminal. */
 int flag_q = 0; 
-
-/* Recursively list subdirectories encountered. */
 int flag_R = 0; 
-
-/* Reverse the order of the sort to get reverse lexicographical order or the
-   smallest or oldest entries ﬁrst. */
 int flag_r = 0; 
-
-/* Sort by size, largest ﬁle ﬁrst. */
 int flag_S = 0; 
-
-/* Display the number of ﬁle system blocks actually used by each ﬁle, in units
-   of 512 bytes or BLOCKSIZE (see ENVIRONMENT) where partial units are rounded
-   up to the next integer value. If the output is to a terminal, a total sum
-   for all the ﬁle sizes is output on a line before the listing. */
 int flag_s = 0; 
-
-/* Sort by time modiﬁed (most recently modiﬁed ﬁrst) before sorting the
-   operands by lexicographical order. */
 int flag_t = 0; 
-
-/* Use time of last access, instead of last modiﬁcation of the ﬁle for sorting
-   ( −t ) or printing ( −l ). */
 int flag_u = 0; 
-
-/* Force raw printing of non-printable characters. This is the default when
-   output is not to a terminal. */
 int flag_w = 0; 
-
-/* (The numeric digit “one”). Force output to be one entry per line. This is
-   the default when output is not to a terminal. */
 int flag_1 = 0; 
-
 
 /*
  * Functions
@@ -139,13 +81,32 @@ usage()
   /* NOTREACHED */
 }
 
+int
+setcmp(const FTSENT **p1, const FTSENT **p2)
+{
+  int result;
+
+  if(flag_c)
+    result = ctimecmp(*p1, *p2);
+  if(flag_u)
+    result = atimecmp(*p1, *p2);
+  if(flag_t)
+    result = mtimecmp(*p1, *p2);
+  else
+    result = namecmp(*p1, *p2);
+  
+  if(flag_r)
+    result = -result;
+  return(result);
+}
+
 void
 traverse(int argc, char *argv[], int fts_options)
 {
   FTS *ftsp;
   FTSENT *p, *chp;
 
-  if ((ftsp = fts_open(argv, fts_options, NULL)) == NULL) {
+  if ((ftsp = fts_open(argv, fts_options, flag_f ? NULL : setcmp)) == NULL) {
     fprintf(stderr, "No such file or directory");
     exit(EXIT_FAILURE);
   }
@@ -159,7 +120,7 @@ traverse(int argc, char *argv[], int fts_options)
   while ((p = fts_read(ftsp)) != NULL) {
     switch (p->fts_info) {
     case FTS_DOT:
-      if (flag_A)
+      if (flag_A && !flag_a)
         break;
       /* FALLTHROUGH */ 
     case FTS_SL:
@@ -169,7 +130,7 @@ traverse(int argc, char *argv[], int fts_options)
     case FTS_F:
       if (p->fts_level != 1)
         break;
-      if (!flag_a && p->fts_name[0] == '.')
+      if (!(flag_a || flag_A) && p->fts_name[0] == '.')
         break;
       if (flag_l) {
         printpermissions(p->fts_statp->st_mode);
@@ -207,10 +168,11 @@ main(int argc, char *argv[])
   setprogname(argv[0]);
 
    // "−AacdFfhiklnqRrSstuw1"
-  while ((ch = getopt(argc, argv, "−Aal")) != -1) {
+  while ((ch = getopt(argc, argv, "−Aacflrtu")) != -1) {
     switch (ch) {   /* Indent the switch. */
     case 'A':
       flag_A = 1;
+      fts_options |= FTS_SEEDOT;
       break;
 
     case 'a':
@@ -218,8 +180,44 @@ main(int argc, char *argv[])
       fts_options |= FTS_SEEDOT;
       break;
 
+    case 'c':
+      flag_c = 1;
+      /*
+       * The −c and −u options override each other; they both override -t;
+       * the last one speciﬁed(-c/-u) determines the ﬁle time used.
+       */
+      if(flag_t)
+        flag_t = 0;
+      if(flag_u)
+        flag_u = 0;
+      break;
+
+    case 'f':
+      flag_f = 1;
+      break;
+
     case 'l':
       flag_l = 1;
+      break;
+
+    case 'r':
+      flag_r = 1;
+      break;
+
+    case 't':
+      flag_t = 1;
+      break;
+
+    case 'u':
+      flag_u = 1;
+      /*
+       * The −c and −u options override each other; they both override -t;
+       * the last one speciﬁed(-c/-u) determines the ﬁle time used.
+       */
+      if(flag_t)
+        flag_t = 0;
+      if(flag_c)
+        flag_c = 0;
       break;
 
     // case '1':
@@ -244,10 +242,16 @@ main(int argc, char *argv[])
     *argv = "./";
 
   /* Override Flags */
-  if (flag_A)
-  {
-    flag_a = 1;
-  }
+  // if (getuid())
+  //   printf("uid: %d", getuid());
+  /* sudo@UID:0 */
+  if (!getuid())
+    flag_A = 1;
+
+  // if (flag_A)
+  // {
+  //   flag_a = 1;
+  // }
 
   traverse(argc, argv, fts_options);
 
