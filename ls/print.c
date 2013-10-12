@@ -73,7 +73,7 @@ printownername(uid_t uid)
   struct passwd * pwdp;
 
   if ((pwdp = getpwuid(uid)) == NULL) {
-    fprintf(stderr, "Failed get owner name from uid: %d\n",
+    fprintf(stderr, "Failed to get owner name from uid: %d\n",
             uid);
     exit(EXIT_FAILURE);
   } 
@@ -87,7 +87,7 @@ printgroupname(gid_t gid)
   struct group *grp;
 
   if ((grp = getgrgid(gid)) == NULL) {
-    fprintf(stderr, "Failed get group name from gid: %-8d\n", 
+    fprintf(stderr, "Failed to get group name from gid: %-8d\n", 
             gid);
     exit(EXIT_FAILURE);
   }
