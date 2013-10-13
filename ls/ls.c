@@ -144,17 +144,24 @@ traverse(int argc, char *argv[], int fts_options)
           if (p->fts_level != 0)
             break;
           if(flag_l) {
-          printpermissions(p->fts_statp->st_mode);
-          printf("  %2d", p->fts_statp->st_nlink);
-          printownername(p->fts_statp->st_uid);
-          printgroupname(p->fts_statp->st_gid);
-          printf("%6lld ", p->fts_statp->st_size);
-          if(flag_u)
-            printime(p->fts_statp->st_atime);
-          else if(flag_c)
-            printime(p->fts_statp->st_ctime);
-          else /* mtime by default */
-            printime(p->fts_statp->st_mtime);
+            if(flag_i)
+              printf("%lld ", p->fts_statp->st_ino);
+            printpermissions(p->fts_statp->st_mode);
+            printf("  %2d", p->fts_statp->st_nlink);
+            printownername(p->fts_statp->st_uid);
+            printgroupname(p->fts_statp->st_gid);
+            /* size */
+            if(flag_h)
+              printhsize(p->fts_statp->st_size);
+            else 
+              printf("%6lld ", p->fts_statp->st_size);
+            /* time */
+            if(flag_u)
+              printime(p->fts_statp->st_atime);
+            else if(flag_c)
+              printime(p->fts_statp->st_ctime);
+            else /* mtime by default */
+              printime(p->fts_statp->st_mtime);
           }
           printf("%s\n", p->fts_path);
         }
@@ -167,11 +174,18 @@ traverse(int argc, char *argv[], int fts_options)
       if (!(flag_a || flag_A) && p->fts_name[0] == '.')
         break;
       if (flag_l) {
+        if(flag_i)
+          printf("%lld ", p->fts_statp->st_ino);
         printpermissions(p->fts_statp->st_mode);
         printf("  %2d", p->fts_statp->st_nlink);
         printownername(p->fts_statp->st_uid);
         printgroupname(p->fts_statp->st_gid);
-        printf("%6lld ", p->fts_statp->st_size);
+        /* size */
+        if(flag_h)
+          printhsize(p->fts_statp->st_size);
+        else 
+          printf("%6lld ", p->fts_statp->st_size);
+        /* time */
         if(flag_u)
           printime(p->fts_statp->st_atime);
         else if(flag_c)
@@ -216,7 +230,7 @@ main(int argc, char *argv[])
   setprogname(argv[0]);
 
    // "−AacdFfhiklnqRrSstuw1"
-  while ((ch = getopt(argc, argv, "−AacdFflrStu")) != -1) {
+  while ((ch = getopt(argc, argv, "−AacdFfhilrStu")) != -1) {
     switch (ch) {   /* Indent the switch. */
     case 'A':
       flag_A = 1;
@@ -247,6 +261,14 @@ main(int argc, char *argv[])
 
     case 'f':
       flag_f = 1;
+      break;
+
+    case 'h':
+      flag_h = 1;
+      break;
+
+    case 'i':
+      flag_i = 1;
       break;
 
     case 'l':

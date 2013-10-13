@@ -48,5 +48,6 @@
 void printpermissions(mode_t);
 void printownername(uid_t);
 void printgroupname(gid_t);
+void printhsize(off_t);
 void printime(time_t);
 void printindicator(mode_t);

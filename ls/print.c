@@ -37,8 +37,18 @@
 #include <time.h>
 #include <pwd.h>
 #include <grp.h>
+#include <math.h>
+// #include <libutil.h>
 
 #include "print.h"
+
+#define B_BYTES 0
+#define K_BYTES 1
+#define M_BYTES 2
+#define G_BYTES 3
+#define T_BYTES 4
+#define P_BYTES 5
+#define E_BYTES 6
 
 void
 printpermissions(mode_t md)
@@ -104,6 +114,29 @@ printime(time_t ptime)
   ts = localtime(&ptime);
   strftime(buf, sizeof(buf), "%b %d %H:%M ", ts);
   printf("%s", buf);
+}
+
+void
+printhsize(off_t size)
+{
+  // char hbuf[19];
+  // humanize_number(hbuf, sizeof(hbuf), size, "B", HN_AUTOSCALE, HN_DECIMAL);
+  // printf("%s\n", hbuf);
+
+  if(size/1152921504606846976)
+    printf("%4lldE ", size/1152921504606846976);
+  else if(size/1125899906842624)
+    printf("%4lldP ", size/1125899906842624);
+  else if(size/1099511627776)
+    printf("%4lldT ", size/1099511627776);
+  else if(size/1073741824)
+    printf("%4lldG ", size/1073741824);
+  else if(size/1048576)
+    printf("%4lldM ", size/1048576);
+  else if(size/1024)
+    printf("%4lldK ", size/1024);
+  else
+    printf("%4lldB ", size);
 }
 
 void
