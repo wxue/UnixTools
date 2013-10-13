@@ -32,3 +32,4 @@ int namecmp(const FTSENT *, const FTSENT *);
 int mtimecmp(const FTSENT *, const FTSENT *);
 int ctimecmp(const FTSENT *, const FTSENT *);
 int atimecmp(const FTSENT *, const FTSENT *);
+int sizecmp(const FTSENT *, const FTSENT *);

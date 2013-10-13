@@ -44,6 +44,10 @@
 #include "print.h"
 #include "cmp.h"
 
+#define NAME_SORT 1
+#define TIME_SORT 2 
+#define SIZE_SORT 3 
+
 /*
  * Flags
  */
@@ -62,12 +66,14 @@ int flag_n = 0;
 int flag_q = 0; 
 int flag_R = 0; 
 int flag_r = 0; 
-int flag_S = 0; 
+// int flag_S = 0; 
 int flag_s = 0; 
-int flag_t = 0; 
+// int flag_t = 0; 
 int flag_u = 0; 
 int flag_w = 0; 
 int flag_1 = 0; 
+
+int sortype = NAME_SORT;
 
 /*
  * Functions
@@ -86,15 +92,21 @@ setcmp(const FTSENT **p1, const FTSENT **p2)
 {
   int result;
 
-  if(flag_c)
-    result = ctimecmp(*p1, *p2);
-  if(flag_u)
-    result = atimecmp(*p1, *p2);
-  if(flag_t)
-    result = mtimecmp(*p1, *p2);
-  else
-    result = namecmp(*p1, *p2);
+  if(sortype == TIME_SORT) {
+    if(flag_c)
+      result = ctimecmp(*p1, *p2);
+    else if(flag_u)
+      result = atimecmp(*p1, *p2);
+    else
+      result = mtimecmp(*p1, *p2);
+  }
+
+  else if(sortype == SIZE_SORT)
+    result = sizecmp(*p1, *p2);
   
+  else /* sortype == NAME_SORT by default */
+    result = namecmp(*p1, *p2);
+
   if(flag_r)
     result = -result;
   return(result);
@@ -137,7 +149,12 @@ traverse(int argc, char *argv[], int fts_options)
           printownername(p->fts_statp->st_uid);
           printgroupname(p->fts_statp->st_gid);
           printf("%6lld ", p->fts_statp->st_size);
-          printmtime(p->fts_statp->st_mtime);
+          if(flag_u)
+            printime(p->fts_statp->st_atime);
+          else if(flag_c)
+            printime(p->fts_statp->st_ctime);
+          else /* mtime by default */
+            printime(p->fts_statp->st_mtime);
           }
           printf("%s\n", p->fts_path);
         }
@@ -155,7 +172,12 @@ traverse(int argc, char *argv[], int fts_options)
         printownername(p->fts_statp->st_uid);
         printgroupname(p->fts_statp->st_gid);
         printf("%6lld ", p->fts_statp->st_size);
-        printmtime(p->fts_statp->st_mtime);
+        if(flag_u)
+          printime(p->fts_statp->st_atime);
+        else if(flag_c)
+          printime(p->fts_statp->st_ctime);
+        else /* mtime by default */
+          printime(p->fts_statp->st_mtime);
         total_b += p->fts_statp->st_blocks;
       }
       if(!flag_F)
@@ -185,6 +207,7 @@ main(int argc, char *argv[])
 {
   // DIR *dp;
   // struct dirent *dirp;
+
   int ch;
   int fts_options;
   // fts_options = FTS_COMFOLLOW | FTS_LOGICAL | FTS_NOCHDIR;
@@ -193,7 +216,7 @@ main(int argc, char *argv[])
   setprogname(argv[0]);
 
    // "−AacdFfhiklnqRrSstuw1"
-  while ((ch = getopt(argc, argv, "−AacdFflrtu")) != -1) {
+  while ((ch = getopt(argc, argv, "−AacdFflrStu")) != -1) {
     switch (ch) {   /* Indent the switch. */
     case 'A':
       flag_A = 1;
@@ -205,16 +228,13 @@ main(int argc, char *argv[])
       fts_options |= FTS_SEEDOT;
       break;
 
+    /*
+     * The −c and −u options override each other;
+     * the last one speciﬁed determines the ﬁle time used.
+     */
     case 'c':
       flag_c = 1;
-      /*
-       * The −c and −u options override each other; they both override -t;
-       * the last one speciﬁed(-c/-u) determines the ﬁle time used.
-       */
-      if(flag_t)
-        flag_t = 0;
-      if(flag_u)
-        flag_u = 0;
+      flag_u = 0;
       break;
 
     case 'd':
@@ -237,20 +257,21 @@ main(int argc, char *argv[])
       flag_r = 1;
       break;
 
-    case 't':
-      flag_t = 1;
+    case 'S':
+      sortype = SIZE_SORT;
       break;
 
+    case 't':
+      sortype = TIME_SORT;
+      break;
+
+    /*
+     * The −c and −u options override each other;
+     * the last one speciﬁed determines the ﬁle time used.
+     */
     case 'u':
       flag_u = 1;
-      /*
-       * The −c and −u options override each other; they both override -t;
-       * the last one speciﬁed(-c/-u) determines the ﬁle time used.
-       */
-      if(flag_t)
-        flag_t = 0;
-      if(flag_c)
-        flag_c = 0;
+      flag_c = 0;
       break;
 
     // case '1':

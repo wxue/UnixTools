@@ -96,12 +96,12 @@ printgroupname(gid_t gid)
 }
 
 void
-printmtime(time_t mtime)
+printime(time_t ptime)
 {
   struct tm *ts;
   char buf[80];
 
-  ts = localtime(&mtime);
+  ts = localtime(&ptime);
   strftime(buf, sizeof(buf), "%b %d %H:%M ", ts);
   printf("%s", buf);
 }

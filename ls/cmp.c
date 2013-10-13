@@ -73,3 +73,14 @@ atimecmp(const FTSENT *p1, const FTSENT *p2)
   else
     return (strcmp(p1->fts_name, p2->fts_name));
 }
+
+int
+sizecmp(const FTSENT *p1, const FTSENT *p2)
+{
+  if (p2->fts_statp->st_size > p1->fts_statp->st_size)
+    return (1);
+  else if (p2->fts_statp->st_size < p1->fts_statp->st_size)
+    return (-1);
+  else
+    return (strcmp(p1->fts_name, p2->fts_name));
+}
