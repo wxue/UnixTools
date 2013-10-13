@@ -105,3 +105,15 @@ printmtime(time_t mtime)
   strftime(buf, sizeof(buf), "%b %d %H:%M ", ts);
   printf("%s", buf);
 }
+
+void
+printindicator(mode_t md)
+{
+  printf( (S_ISLNK(md))   ? "@\n" :
+          (S_ISDIR(md))   ? "/\n" :
+          (md & S_IXOTH)  ? "*\n" :
+          (S_ISSOCK(md))  ? "=\n" :
+          (S_ISFIFO(md))  ? "|\n" :
+          (S_ISWHT(md))   ? "%%\n" :
+          "\n");
+}

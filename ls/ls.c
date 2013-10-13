@@ -158,7 +158,12 @@ traverse(int argc, char *argv[], int fts_options)
         printmtime(p->fts_statp->st_mtime);
         total_b += p->fts_statp->st_blocks;
       }
-      printf("%s\n", p->fts_name);
+      if(!flag_F)
+        printf("%s\n", p->fts_name);
+      else {
+        printf("%s", p->fts_name);
+        printindicator(p->fts_statp->st_mode);
+      }
       break;
 
     default:
@@ -188,7 +193,7 @@ main(int argc, char *argv[])
   setprogname(argv[0]);
 
    // "−AacdFfhiklnqRrSstuw1"
-  while ((ch = getopt(argc, argv, "−Aacdflrtu")) != -1) {
+  while ((ch = getopt(argc, argv, "−AacdFflrtu")) != -1) {
     switch (ch) {   /* Indent the switch. */
     case 'A':
       flag_A = 1;
@@ -214,6 +219,10 @@ main(int argc, char *argv[])
 
     case 'd':
       flag_d = 1;
+      break;
+
+    case 'F':
+      flag_F = 1;
       break;
 
     case 'f':
