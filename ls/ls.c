@@ -105,6 +105,8 @@ traverse(int argc, char *argv[], int fts_options)
 {
   FTS *ftsp;
   FTSENT *p, *chp;
+  blkcnt_t  total_b;
+  total_b = 0;
 
   if ((ftsp = fts_open(argv, fts_options, flag_f ? NULL : setcmp)) == NULL) {
     fprintf(stderr, "No such file or directory");
@@ -126,8 +128,23 @@ traverse(int argc, char *argv[], int fts_options)
     case FTS_SL:
       /* FALLTHROUGH */
     case FTS_D:
+      if(flag_d) {
+          if (p->fts_level != 0)
+            break;
+          if(flag_l) {
+          printpermissions(p->fts_statp->st_mode);
+          printf("  %2d", p->fts_statp->st_nlink);
+          printownername(p->fts_statp->st_uid);
+          printgroupname(p->fts_statp->st_gid);
+          printf("%6lld ", p->fts_statp->st_size);
+          printmtime(p->fts_statp->st_mtime);
+          }
+          printf("%s\n", p->fts_path);
+        }
       /* FALLTHROUGH */
     case FTS_F:
+      if(flag_d)
+        break;
       if (p->fts_level != 1)
         break;
       if (!(flag_a || flag_A) && p->fts_name[0] == '.')
@@ -139,6 +156,7 @@ traverse(int argc, char *argv[], int fts_options)
         printgroupname(p->fts_statp->st_gid);
         printf("%6lld ", p->fts_statp->st_size);
         printmtime(p->fts_statp->st_mtime);
+        total_b += p->fts_statp->st_blocks;
       }
       printf("%s\n", p->fts_name);
       break;
@@ -147,6 +165,8 @@ traverse(int argc, char *argv[], int fts_options)
       break;
     }
   }
+  if(flag_l && !flag_d)
+    printf("total: %lld\n", total_b);
   fts_close(ftsp);
 
   exit(EXIT_SUCCESS);
@@ -168,7 +188,7 @@ main(int argc, char *argv[])
   setprogname(argv[0]);
 
    // "−AacdFfhiklnqRrSstuw1"
-  while ((ch = getopt(argc, argv, "−Aacflrtu")) != -1) {
+  while ((ch = getopt(argc, argv, "−Aacdflrtu")) != -1) {
     switch (ch) {   /* Indent the switch. */
     case 'A':
       flag_A = 1;
@@ -190,6 +210,10 @@ main(int argc, char *argv[])
         flag_t = 0;
       if(flag_u)
         flag_u = 0;
+      break;
+
+    case 'd':
+      flag_d = 1;
       break;
 
     case 'f':
@@ -239,19 +263,15 @@ main(int argc, char *argv[])
   argv += optind;
 
   if (*argv == NULL)
-    *argv = "./";
+    *argv = ".";
 
-  /* Override Flags */
-  // if (getuid())
-  //   printf("uid: %d", getuid());
+  /* 
+   * Override Flags 
+   */
+  
   /* sudo@UID:0 */
   if (!getuid())
     flag_A = 1;
-
-  // if (flag_A)
-  // {
-  //   flag_a = 1;
-  // }
 
   traverse(argc, argv, fts_options);
 
