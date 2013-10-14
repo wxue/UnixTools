@@ -140,6 +140,15 @@ printhsize(off_t size)
 }
 
 void
+printksize(off_t size)
+{
+  if(size != 0 && size/1024 == 0)
+    printf("   1K ");
+  else
+    printf("%4lldK ", size/1024);
+}
+
+void
 printindicator(mode_t md)
 {
   printf( (S_ISLNK(md))   ? "@\n" :

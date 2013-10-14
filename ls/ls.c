@@ -119,7 +119,7 @@ display(FTSENT *p, FTSENT *list)
   blkcnt_t  total_b;
   total_b = 0;
 
-  if(flag_l) {
+  if(flag_l || flag_n) {
     for (listp = list; listp; listp = listp->fts_link) {
       if (!(flag_a || flag_A) && listp->fts_name[0] == '.')
         continue;
@@ -131,17 +131,25 @@ display(FTSENT *p, FTSENT *list)
   for (listp = list; listp; listp = listp->fts_link) {
     if (!(flag_a || flag_A) && listp->fts_name[0] == '.')
       continue;
-    if(flag_l) {
+    if(flag_l || flag_n) {
       // printf("fts_number: %ld  ", listp->fts_number);
       if(flag_i)
         printf("%lld ", listp->fts_statp->st_ino);
       printpermissions(listp->fts_statp->st_mode);
       printf("  %2d", listp->fts_statp->st_nlink);
-      printownername(listp->fts_statp->st_uid);
-      printgroupname(listp->fts_statp->st_gid);
+
+      if(flag_n)
+        printf("%d %d", listp->fts_statp->st_uid, listp->fts_statp->st_gid);
+      else {
+        printownername(listp->fts_statp->st_uid);
+        printgroupname(listp->fts_statp->st_gid);
+      }
+          
       /* size */
       if(flag_h)
         printhsize(listp->fts_statp->st_size);
+      else if(flag_k)
+        printksize(listp->fts_statp->st_size);
       else 
         printf("%6lld ", listp->fts_statp->st_size);
       /* time */
@@ -185,17 +193,25 @@ traverse(int argc, char *argv[], int p_options, int chp_options)
       if (p->fts_level != 0)
         break;
       if(flag_d) {
-        if(flag_l) {
+        if(flag_l || flag_n) {
           if(flag_i)
             printf("%lld ", p->fts_statp->st_ino);
           printpermissions(p->fts_statp->st_mode);
           printf("  %2d", p->fts_statp->st_nlink);
-          printownername(p->fts_statp->st_uid);
-          printgroupname(p->fts_statp->st_gid);
+
+          if(flag_n)
+            printf("%d %d", p->fts_statp->st_uid, p->fts_statp->st_gid);
+          else {
+            printownername(p->fts_statp->st_uid);
+            printgroupname(p->fts_statp->st_gid);
+          }
+
           /* size */
           if(flag_h)
             printhsize(p->fts_statp->st_size);
-          else 
+          else if(flag_k)
+            printksize(p->fts_statp->st_size);
+          else
             printf("%6lld ", p->fts_statp->st_size);
           /* time */
           if(flag_u)
@@ -248,7 +264,7 @@ main(int argc, char *argv[])
   setprogname(argv[0]);
 
    // "−AacdFfhiklnqRrSstuw1"
-  while ((ch = getopt(argc, argv, "−AacdFfhilrStu")) != -1) {
+  while ((ch = getopt(argc, argv, "−AacdFfhiklnrStu")) != -1) {
     switch (ch) {   /* Indent the switch. */
     case 'A':
       flag_A = 1;
@@ -288,8 +304,16 @@ main(int argc, char *argv[])
       flag_i = 1;
       break;
 
+    case 'k':
+      flag_k = 1;
+      break;
+
     case 'l':
       flag_l = 1;
+      break;
+
+    case 'n':
+      flag_n = 1;
       break;
 
     case 'r':
