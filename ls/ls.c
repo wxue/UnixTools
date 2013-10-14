@@ -1,4 +1,4 @@
-/* $NetBSD: ls.c,v 0.02 2013/10/05 20:10:00 Weiyu Exp $ */
+/* $NetBSD: ls.c,v 0.03 2013/10/13 23:40:40 Weiyu Exp $ */
  
 /* Copyright (c) 2013, Weiyu Xue
  * All rights reserved.
@@ -113,101 +113,118 @@ setcmp(const FTSENT **p1, const FTSENT **p2)
 }
 
 void
-traverse(int argc, char *argv[], int fts_options)
+display(FTSENT *p, FTSENT *list)
 {
-  FTS *ftsp;
-  FTSENT *p, *chp;
+  FTSENT *listp;
   blkcnt_t  total_b;
   total_b = 0;
 
-  if ((ftsp = fts_open(argv, fts_options, flag_f ? NULL : setcmp)) == NULL) {
+  if(flag_l) {
+    for (listp = list; listp; listp = listp->fts_link) {
+      if (!(flag_a || flag_A) && listp->fts_name[0] == '.')
+        continue;
+      total_b += listp->fts_statp->st_blocks;
+    }
+    printf("total: %lld\n", total_b); 
+  }
+
+  for (listp = list; listp; listp = listp->fts_link) {
+    if (!(flag_a || flag_A) && listp->fts_name[0] == '.')
+      continue;
+    if(flag_l) {
+      // printf("fts_number: %ld  ", listp->fts_number);
+      if(flag_i)
+        printf("%lld ", listp->fts_statp->st_ino);
+      printpermissions(listp->fts_statp->st_mode);
+      printf("  %2d", listp->fts_statp->st_nlink);
+      printownername(listp->fts_statp->st_uid);
+      printgroupname(listp->fts_statp->st_gid);
+      /* size */
+      if(flag_h)
+        printhsize(listp->fts_statp->st_size);
+      else 
+        printf("%6lld ", listp->fts_statp->st_size);
+      /* time */
+      if(flag_u)
+        printime(listp->fts_statp->st_atime);
+      else if(flag_c)
+        printime(listp->fts_statp->st_ctime);
+      else /* mtime by default */
+        printime(listp->fts_statp->st_mtime);
+    }
+    if(flag_F) {
+      printf("%s", listp->fts_name);
+      printindicator(listp->fts_statp->st_mode);
+    }
+    else
+      printf("%s\n", listp->fts_name);
+  }
+}
+
+void
+traverse(int argc, char *argv[], int p_options, int chp_options)
+{
+  FTS *ftsp;
+  FTSENT *p, *chp;
+  int wrap = 0;
+
+  if ((ftsp = fts_open(argv, p_options, flag_f ? NULL : setcmp)) == NULL) {
     fprintf(stderr, "No such file or directory");
     exit(EXIT_FAILURE);
   }
   
-  chp = fts_children(ftsp, 0);
-  if (chp == NULL) {
-    printf("no files");
-    exit(EXIT_SUCCESS);
-  }
+  // chp = fts_children(ftsp, 0);
+  // if (chp == NULL) {
+  //   printf("no files");
+  //   exit(EXIT_SUCCESS);
+  // }
 
   while ((p = fts_read(ftsp)) != NULL) {
     switch (p->fts_info) {
-    case FTS_DOT:
-      if (flag_A && !flag_a)
-        break;
-      /* FALLTHROUGH */ 
-    case FTS_SL:
-      /* FALLTHROUGH */
     case FTS_D:
+      if (p->fts_level != 0)
+        break;
       if(flag_d) {
-          if (p->fts_level != 0)
-            break;
-          if(flag_l) {
-            if(flag_i)
-              printf("%lld ", p->fts_statp->st_ino);
-            printpermissions(p->fts_statp->st_mode);
-            printf("  %2d", p->fts_statp->st_nlink);
-            printownername(p->fts_statp->st_uid);
-            printgroupname(p->fts_statp->st_gid);
-            /* size */
-            if(flag_h)
-              printhsize(p->fts_statp->st_size);
-            else 
-              printf("%6lld ", p->fts_statp->st_size);
-            /* time */
-            if(flag_u)
-              printime(p->fts_statp->st_atime);
-            else if(flag_c)
-              printime(p->fts_statp->st_ctime);
-            else /* mtime by default */
-              printime(p->fts_statp->st_mtime);
-          }
-          printf("%s\n", p->fts_path);
+        if(flag_l) {
+          if(flag_i)
+            printf("%lld ", p->fts_statp->st_ino);
+          printpermissions(p->fts_statp->st_mode);
+          printf("  %2d", p->fts_statp->st_nlink);
+          printownername(p->fts_statp->st_uid);
+          printgroupname(p->fts_statp->st_gid);
+          /* size */
+          if(flag_h)
+            printhsize(p->fts_statp->st_size);
+          else 
+            printf("%6lld ", p->fts_statp->st_size);
+          /* time */
+          if(flag_u)
+            printime(p->fts_statp->st_atime);
+          else if(flag_c)
+            printime(p->fts_statp->st_ctime);
+          else /* mtime by default */
+            printime(p->fts_statp->st_mtime);
         }
-      /* FALLTHROUGH */
-    case FTS_F:
-      if(flag_d)
+        printf("%s\n", p->fts_path);
         break;
-      if (p->fts_level != 1)
-        break;
-      if (!(flag_a || flag_A) && p->fts_name[0] == '.')
-        break;
-      if (flag_l) {
-        if(flag_i)
-          printf("%lld ", p->fts_statp->st_ino);
-        printpermissions(p->fts_statp->st_mode);
-        printf("  %2d", p->fts_statp->st_nlink);
-        printownername(p->fts_statp->st_uid);
-        printgroupname(p->fts_statp->st_gid);
-        /* size */
-        if(flag_h)
-          printhsize(p->fts_statp->st_size);
-        else 
-          printf("%6lld ", p->fts_statp->st_size);
-        /* time */
-        if(flag_u)
-          printime(p->fts_statp->st_atime);
-        else if(flag_c)
-          printime(p->fts_statp->st_ctime);
-        else /* mtime by default */
-          printime(p->fts_statp->st_mtime);
-        total_b += p->fts_statp->st_blocks;
       }
-      if(!flag_F)
-        printf("%s\n", p->fts_name);
-      else {
-        printf("%s", p->fts_name);
-        printindicator(p->fts_statp->st_mode);
+      // if (!(flag_a || flag_A) && p->fts_name[0] == '.')
+      //   break;
+
+      if (wrap)
+        printf("\n%s:\n", p->fts_path);
+      else if (argc > 1) {
+        printf("%s:\n", p->fts_path);
+        wrap = 1;
       }
-      break;
+
+      chp = fts_children(ftsp, chp_options);
+      display(p, chp);
 
     default:
       break;
     }
   }
-  if(flag_l && !flag_d)
-    printf("total: %lld\n", total_b);
   fts_close(ftsp);
 
   exit(EXIT_SUCCESS);
@@ -223,8 +240,9 @@ main(int argc, char *argv[])
   // struct dirent *dirp;
 
   int ch;
-  int fts_options;
-  // fts_options = FTS_COMFOLLOW | FTS_LOGICAL | FTS_NOCHDIR;
+  int p_options;
+  int chp_options;
+  // p_options = FTS_COMFOLLOW | FTS_LOGICAL | FTS_NOCHDIR;
 
   /* This works on BSD, but not in the stdlib on Linux. */
   setprogname(argv[0]);
@@ -234,12 +252,11 @@ main(int argc, char *argv[])
     switch (ch) {   /* Indent the switch. */
     case 'A':
       flag_A = 1;
-      fts_options |= FTS_SEEDOT;
       break;
 
     case 'a':
       flag_a = 1;
-      fts_options |= FTS_SEEDOT;
+      p_options |= FTS_SEEDOT;
       break;
 
     /*
@@ -325,7 +342,7 @@ main(int argc, char *argv[])
   if (!getuid())
     flag_A = 1;
 
-  traverse(argc, argv, fts_options);
+  traverse(argc, argv, p_options, chp_options);
 
   return 0;
 }
