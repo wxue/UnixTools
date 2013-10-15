@@ -119,34 +119,67 @@ display(FTSENT *p, FTSENT *list)
   FTSENT *listp;
   blkcnt_t  total_b;
   total_b = 0;
-  // char * filename;
+  int maxblocks, maxnlink, maxuid, maxgid, maxownerlen, 
+      maxgrouplen, maxsize, maxnamelen;
+  maxblocks = maxnlink = maxuid = maxgid 
+            = maxownerlen = maxgrouplen
+            = maxsize = maxnamelen = 0;
 
-  if(flag_l || flag_n) {
-    for (listp = list; listp; listp = listp->fts_link) {
-      if (!(flag_a || flag_A) && listp->fts_name[0] == '.')
-        continue;
-      total_b += listp->fts_statp->st_blocks;
-    }
-    printf("total: %lld\n", total_b); 
-  }
+  // char* charp;
 
+
+  /* prepare for display */
   for (listp = list; listp; listp = listp->fts_link) {
     if (!(flag_a || flag_A) && listp->fts_name[0] == '.')
       continue;
-    if(flag_q)
-      printf("%2lld ", listp->fts_statp->st_blocks);
+    if(flag_s && listp->fts_statp->st_blocks > maxblocks)
+      maxblocks = listp->fts_statp->st_blocks;
     if(flag_l || flag_n) {
-      // printf("fts_number: %ld  ", listp->fts_number);
+      total_b += listp->fts_statp->st_blocks;
+
+    if(listp->fts_statp->st_nlink > maxnlink)
+      maxnlink = listp->fts_statp->st_nlink;
+
+    if(flag_n && listp->fts_statp->st_uid > maxuid)
+      maxuid = listp->fts_statp->st_uid;
+    if(flag_n && listp->fts_statp->st_gid > maxgid)
+      maxgid = listp->fts_statp->st_gid;
+    
+    if(strlen(getownername(listp->fts_statp->st_uid)) > maxownerlen)
+      maxownerlen = strlen(getownername(listp->fts_statp->st_uid));
+    if(strlen(getgroupname(listp->fts_statp->st_gid)) > maxgrouplen)
+      maxgrouplen = strlen(getgroupname(listp->fts_statp->st_gid));
+
+    if(listp->fts_statp->st_size > maxsize) 
+      maxsize = listp->fts_statp->st_size;
+    }
+
+    if(strlen(listp->fts_name) > maxnamelen)
+      maxnamelen = strlen(listp->fts_name);
+  }
+  if(flag_l || flag_n)
+    printf("total: %lld\n", total_b); 
+
+  /* actually display */
+  for (listp = list; listp; listp = listp->fts_link) {
+    if (!(flag_a || flag_A) && listp->fts_name[0] == '.')
+      continue;
+    if(flag_s) {
+      maxprint(listp->fts_statp->st_blocks, maxblocks);  
+    }
+    if(flag_l || flag_n) {
       if(flag_i)
         printf("%lld ", listp->fts_statp->st_ino);
-      printpermissions(listp->fts_statp->st_mode);
-      printf("  %2d", listp->fts_statp->st_nlink);
+      printmodes(listp->fts_statp->st_mode);
+      maxprint(listp->fts_statp->st_nlink, maxnlink);
 
-      if(flag_n)
-        printf("%d %d", listp->fts_statp->st_uid, listp->fts_statp->st_gid);
+      if(flag_n) {
+        maxprint(listp->fts_statp->st_uid, maxuid);  
+        maxprint(listp->fts_statp->st_gid, maxgid);
+      }
       else {
-        printownername(listp->fts_statp->st_uid);
-        printgroupname(listp->fts_statp->st_gid);
+        maxlenprint(getownername(listp->fts_statp->st_uid), maxownerlen);
+        maxlenprint(getgroupname(listp->fts_statp->st_gid), maxgrouplen);
       }
           
       /* size */
@@ -154,15 +187,17 @@ display(FTSENT *p, FTSENT *list)
         printhsize(listp->fts_statp->st_size);
       else if(flag_k)
         printksize(listp->fts_statp->st_size);
-      else 
-        printf("%6lld ", listp->fts_statp->st_size);
+      else {
+        maxprint(listp->fts_statp->st_size, maxsize);  
+        printf(" ");
+      }
       /* time */
       if(flag_u)
-        printime(listp->fts_statp->st_atime);
+        printtime(listp->fts_statp->st_atime);
       else if(flag_c)
-        printime(listp->fts_statp->st_ctime);
+        printtime(listp->fts_statp->st_ctime);
       else /* mtime by default */
-        printime(listp->fts_statp->st_mtime);
+        printtime(listp->fts_statp->st_mtime);
     }
 
     // printf("%c\n", listp->fts_name[0]);
@@ -210,30 +245,30 @@ traverse(int argc, char *argv[], int p_options, int chp_options)
         if(flag_l || flag_n) {
           if(flag_i)
             printf("%lld ", p->fts_statp->st_ino);
-          printpermissions(p->fts_statp->st_mode);
-          printf("  %2d", p->fts_statp->st_nlink);
-
+          printmodes(p->fts_statp->st_mode);
+          printf("  %2d ", p->fts_statp->st_nlink);
+    
           if(flag_n)
-            printf("%d %d", p->fts_statp->st_uid, p->fts_statp->st_gid);
+            printf("%d %d ", p->fts_statp->st_uid, p->fts_statp->st_gid);
           else {
-            printownername(p->fts_statp->st_uid);
-            printgroupname(p->fts_statp->st_gid);
+            printf("%s ", getownername(p->fts_statp->st_uid));
+            printf("%s ", getgroupname(p->fts_statp->st_gid));
           }
-
+              
           /* size */
           if(flag_h)
             printhsize(p->fts_statp->st_size);
           else if(flag_k)
             printksize(p->fts_statp->st_size);
-          else
+          else 
             printf("%6lld ", p->fts_statp->st_size);
           /* time */
           if(flag_u)
-            printime(p->fts_statp->st_atime);
+            printtime(p->fts_statp->st_atime);
           else if(flag_c)
-            printime(p->fts_statp->st_ctime);
+            printtime(p->fts_statp->st_ctime);
           else /* mtime by default */
-            printime(p->fts_statp->st_mtime);
+            printtime(p->fts_statp->st_mtime);
         }
         printf("%s\n", p->fts_path);
         break;

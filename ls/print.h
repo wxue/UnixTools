@@ -27,28 +27,14 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _S_IFWHT
-#define _S_IFWHT  0160000   /* whiteout */
-#endif
-#ifndef S_ISWHT(m)
-#define  S_ISWHT(m)  ((m & _S_IFMT) == _S_IFWHT)
-#endif
 
-#ifndef _S_ARCH1
-#define _S_ARCH1  0200000   /* Archive state 1, ls -l shows 'a' */
-#endif
-#define S_ISARCH1(m) ((m & _S_ARCH1) == _S_ARCH1)
+char* getownername(uid_t);
+char* getgroupname(gid_t);
 
-#ifndef _S_ARCH2
-#define _S_ARCH2  0400000   /* Archive state 2, ls -l shows 'A' */
-#endif
-#define S_ISARCH2(m) ((m & _S_ARCH2) == _S_ARCH2)
-
-
-void printpermissions(mode_t);
-void printownername(uid_t);
-void printgroupname(gid_t);
+void maxprint(long long, int);
+void maxlenprint(char*, int);
+void printmodes(mode_t);
+void printtime(time_t);
+void printindicator(mode_t);
 void printhsize(off_t);
 void printksize(off_t);
-void printime(time_t);
-void printindicator(mode_t);

@@ -38,6 +38,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <math.h>
+#include <string.h>
 // #include <libutil.h>
 
 #include "print.h"
@@ -51,34 +52,15 @@
 #define E_BYTES 6
 
 void
-printpermissions(mode_t md)
+printmodes(mode_t md)
 {
-  printf( (S_ISARCH1(md)) ? "a" :
-          (S_ISARCH2(md)) ? "A" :
-          (S_ISBLK(md))   ? "b" :
-          (S_ISCHR(md))   ? "c" :
-          (S_ISDIR(md))   ? "d" :
-          (S_ISLNK(md))   ? "l" :
-          (S_ISSOCK(md))  ? "s" :
-          (S_ISFIFO(md))  ? "p" :
-          (S_ISWHT(md))   ? "w" :
-          (S_ISREG(md))   ? "-" :
-          "?");
-  // strmode() is another way to do this
-
-  printf( (md & S_IRUSR) ? "r" : "-");
-  printf( (md & S_IWUSR) ? "w" : "-");
-  printf( (md & S_IXUSR) ? "x" : "-");
-  printf( (md & S_IRGRP) ? "r" : "-");
-  printf( (md & S_IWGRP) ? "w" : "-");
-  printf( (md & S_IXGRP) ? "x" : "-");
-  printf( (md & S_IROTH) ? "r" : "-");
-  printf( (md & S_IWOTH) ? "w" : "-");
-  printf( (md & S_IXOTH) ? "x" : "-");
+  char buf[10];
+  (void)strmode(md, buf);
+  printf("%s", buf);
 }
 
-void
-printownername(uid_t uid)
+char*
+getownername(uid_t uid)
 {
   struct passwd * pwdp;
 
@@ -88,11 +70,11 @@ printownername(uid_t uid)
     exit(EXIT_FAILURE);
   } 
   else 
-    printf(" %s ", pwdp->pw_name);
+    return(pwdp->pw_name);
 }
 
-void
-printgroupname(gid_t gid)
+char*
+getgroupname(gid_t gid)
 {
   struct group *grp;
 
@@ -102,26 +84,27 @@ printgroupname(gid_t gid)
     exit(EXIT_FAILURE);
   }
   else
-    printf(" %-8.8s", grp->gr_name);
+    return(grp->gr_name);
 }
 
 void
-printime(time_t ptime)
+printtime(time_t ptime)
 {
   struct tm *ts;
   char buf[80];
 
   ts = localtime(&ptime);
   strftime(buf, sizeof(buf), "%b %d %H:%M ", ts);
-  printf("%s", buf);
+  printf("%s ", buf);
 }
 
 void
 printhsize(off_t size)
 {
-  // char hbuf[19];
-  // humanize_number(hbuf, sizeof(hbuf), size, "B", HN_AUTOSCALE, HN_DECIMAL);
-  // printf("%s\n", hbuf);
+  if(size/1152921504606846976 > 1024) {
+    fprintf(stderr, "File size too huge.");
+    exit(EXIT_FAILURE);
+  }
 
   if(size/1152921504606846976)
     printf("%4lldE ", size/1152921504606846976);
@@ -158,4 +141,49 @@ printindicator(mode_t md)
           (S_ISFIFO(md))  ? "|\n" :
           (S_ISWHT(md))   ? "%%\n" :
           "\n");
+}
+
+void
+maxprint(long long value, int maxvalue)
+{
+  if(maxvalue/100000000000)
+    printf("%12lld ", value);
+  else if(maxvalue/10000000000)
+    printf("%11lld ", value);
+  else if(maxvalue/1000000000)
+    printf("%10lld ", value);
+  else if(maxvalue/100000000)
+    printf("%9lld ", value);
+  else if(maxvalue/10000000)
+    printf("%8lld ", value);
+  else if(maxvalue/1000000)
+    printf("%7lld ", value);
+  else if(maxvalue/100000)
+    printf("%6lld ", value);
+  else if(maxvalue/10000)
+    printf("%5lld ", value);
+  else if(maxvalue/1000)
+    printf("%4lld ", value);
+  else if(maxvalue/100)
+    printf("%3lld ", value);
+  else
+    printf("%2lld ", value);
+
+}
+
+void
+maxlenprint(char* value, int maxlen)
+{
+  char* p;
+  p=(char*)malloc(maxlen*sizeof(char));
+  if(p != NULL) {
+    strcpy(p, value);
+    printf("%s ", p);
+  }
+  else {
+    fprintf(stderr, "malloc error!\n");
+    exit(EXIT_FAILURE);
+  }
+  free(p);
+  p=NULL;
 }
