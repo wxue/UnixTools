@@ -190,7 +190,7 @@ traverse(int argc, char *argv[], int p_options, int chp_options)
   while ((p = fts_read(ftsp)) != NULL) {
     switch (p->fts_info) {
     case FTS_D:
-      if (p->fts_level != 0)
+      if (!flag_R && p->fts_level != 0)
         break;
       if(flag_d) {
         if(flag_l || flag_n) {
@@ -228,9 +228,9 @@ traverse(int argc, char *argv[], int p_options, int chp_options)
       //   break;
 
       if (wrap)
-        printf("\n%s:\n", p->fts_path);
-      else if (argc > 1) {
-        printf("%s:\n", p->fts_path);
+        (void)printf("\n%s:\n", p->fts_path);
+      else if (argc > 1 || flag_R) {
+        (void)printf("%s:\n", p->fts_path);
         wrap = 1;
       }
 
@@ -264,7 +264,7 @@ main(int argc, char *argv[])
   setprogname(argv[0]);
 
    // "−AacdFfhiklnqRrSstuw1"
-  while ((ch = getopt(argc, argv, "−AacdFfhiklnrStu")) != -1) {
+  while ((ch = getopt(argc, argv, "−AacdFfhiklnRrStu")) != -1) {
     switch (ch) {   /* Indent the switch. */
     case 'A':
       flag_A = 1;
@@ -314,6 +314,10 @@ main(int argc, char *argv[])
 
     case 'n':
       flag_n = 1;
+      break;
+
+    case 'R':
+      flag_R = 1;
       break;
 
     case 'r':
