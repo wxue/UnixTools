@@ -73,8 +73,10 @@ int flag_s = 0;
 int flag_u = 0; 
 int flag_w = 0; 
 int flag_1 = 0; 
+int flag_x = 0; 
 
 int sortype = NAME_SORT;
+int t_width;
 
 /*
  * Functions
@@ -124,6 +126,10 @@ display(FTSENT *p, FTSENT *list)
   maxblocks = maxnlink = maxuid = maxgid 
             = maxownerlen = maxgrouplen
             = maxsize = maxnamelen = 0;
+  int file_counter, display_row, display_column;
+  file_counter = 0;
+  display_row = display_column = 1;
+  int x_counter, C_counter;
 
   // char* charp;
 
@@ -132,6 +138,7 @@ display(FTSENT *p, FTSENT *list)
   for (listp = list; listp; listp = listp->fts_link) {
     if (!(flag_a || flag_A) && listp->fts_name[0] == '.')
       continue;
+
     if(flag_s && listp->fts_statp->st_blocks > maxblocks)
       maxblocks = listp->fts_statp->st_blocks;
     if(flag_l || flag_n) {
@@ -156,9 +163,22 @@ display(FTSENT *p, FTSENT *list)
 
     if(strlen(listp->fts_name) > maxnamelen)
       maxnamelen = strlen(listp->fts_name);
+
+    file_counter++;
   }
   if(flag_l || flag_n)
     printf("total: %lld\n", total_b); 
+
+  /* -C -x */
+  if((2*maxnamelen+2) > t_width)
+    flag_1 = 1;
+  else {
+    display_column = t_width/(maxnamelen+1)-2;
+    display_row = file_counter/display_column + 1;
+  }
+  printf("t_width: %d maxnamelen: %d display_column: %d\n", t_width, maxnamelen, display_column);
+  x_counter = 0;
+  C_counter = 0;
 
   /* actually display */
   for (listp = list; listp; listp = listp->fts_link) {
@@ -210,12 +230,37 @@ display(FTSENT *p, FTSENT *list)
       }
     }
     if(flag_F) {
-      printf("%s", listp->fts_name);
-      printindicator(listp->fts_statp->st_mode);
+      if(flag_1 || flag_l || flag_n) {
+        printf("%s", listp->fts_name);
+        printindicator(listp->fts_statp->st_mode);
+        printf("\n");
+      }
+      else if(flag_x) {
+        maxlenprint(listp->fts_name, maxnamelen);
+        printf("  ");
+        if(x_counter > display_column) {
+          printf("\n");
+          x_counter = 0;
+        x_counter++;
+        }
+      }
     }
-    else
-      printf("%s\n", listp->fts_name);
+    else {
+      if(flag_1 || flag_l || flag_n)
+        printf("%s\n", listp->fts_name);
+      else if(flag_x) {
+        maxlenprint(listp->fts_name, maxnamelen);
+        printf("  ");
+        x_counter++;
+        if(x_counter > display_column) {
+          printf("\n");
+          x_counter = 0;
+        }
+      }
+    }
   }
+  if(flag_x)
+    printf("\n");
 }
 
 void
@@ -308,7 +353,6 @@ main(int argc, char *argv[])
   int p_options;
   int chp_options;
   struct winsize sz;
-  int t_width;
 
   // p_options = FTS_COMFOLLOW | FTS_LOGICAL | FTS_NOCHDIR;
 
@@ -316,7 +360,7 @@ main(int argc, char *argv[])
   setprogname(argv[0]);
 
    // "−AacdFfhiklnqRrSstuw1"
-  while ((ch = getopt(argc, argv, "−AacdFfhiklnqRrSstuw1")) != -1) {
+  while ((ch = getopt(argc, argv, "−AacdFfhiklnqRrSstuw1x")) != -1) {
     switch (ch) {   /* Indent the switch. */
     case 'A':
       flag_A = 1;
@@ -409,6 +453,10 @@ main(int argc, char *argv[])
 
     case '1':
       flag_1 = 1;
+
+    case 'x':
+      flag_x = 1;
+      break;
 
     default:
     case '?':

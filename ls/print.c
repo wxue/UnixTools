@@ -134,13 +134,13 @@ printksize(off_t size)
 void
 printindicator(mode_t md)
 {
-  printf( (S_ISLNK(md))   ? "@\n" :
-          (S_ISDIR(md))   ? "/\n" :
-          (md & S_IXOTH)  ? "*\n" :
-          (S_ISSOCK(md))  ? "=\n" :
-          (S_ISFIFO(md))  ? "|\n" :
-          (S_ISWHT(md))   ? "%%\n" :
-          "\n");
+  printf( (S_ISLNK(md))   ? "@" :
+          (S_ISDIR(md))   ? "/" :
+          (md & S_IXOTH)  ? "*" :
+          (S_ISSOCK(md))  ? "=" :
+          (S_ISFIFO(md))  ? "|" :
+          (S_ISWHT(md))   ? "%%" :
+          "?");
 }
 
 void
@@ -175,9 +175,15 @@ void
 maxlenprint(char* value, int maxlen)
 {
   char* p;
+  int lack;
   p=(char*)malloc(maxlen*sizeof(char));
   if(p != NULL) {
+    lack = maxlen - strlen(value);
     strcpy(p, value);
+    while(lack != 0) {
+      strcat(p, " ");
+      lack--;
+    }
     printf("%s ", p);
   }
   else {
