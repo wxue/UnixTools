@@ -30,6 +30,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 
 #include <ctype.h>
 #include <stdio.h>
@@ -118,6 +119,7 @@ display(FTSENT *p, FTSENT *list)
   FTSENT *listp;
   blkcnt_t  total_b;
   total_b = 0;
+  // char * filename;
 
   if(flag_l || flag_n) {
     for (listp = list; listp; listp = listp->fts_link) {
@@ -131,6 +133,8 @@ display(FTSENT *p, FTSENT *list)
   for (listp = list; listp; listp = listp->fts_link) {
     if (!(flag_a || flag_A) && listp->fts_name[0] == '.')
       continue;
+    if(flag_q)
+      printf("%2lld ", listp->fts_statp->st_blocks);
     if(flag_l || flag_n) {
       // printf("fts_number: %ld  ", listp->fts_number);
       if(flag_i)
@@ -159,6 +163,16 @@ display(FTSENT *p, FTSENT *list)
         printime(listp->fts_statp->st_ctime);
       else /* mtime by default */
         printime(listp->fts_statp->st_mtime);
+    }
+
+    // printf("%c\n", listp->fts_name[0]);
+    if(flag_q) {
+      int c = 0; 
+      while(c < strlen(listp->fts_name)) {
+        if(!isprint(listp->fts_name[c]))
+          listp->fts_name[c] = '?';
+        c++;
+      }
     }
     if(flag_F) {
       printf("%s", listp->fts_name);
@@ -258,13 +272,16 @@ main(int argc, char *argv[])
   int ch;
   int p_options;
   int chp_options;
+  struct winsize sz;
+  int t_width;
+
   // p_options = FTS_COMFOLLOW | FTS_LOGICAL | FTS_NOCHDIR;
 
   /* This works on BSD, but not in the stdlib on Linux. */
   setprogname(argv[0]);
 
    // "−AacdFfhiklnqRrSstuw1"
-  while ((ch = getopt(argc, argv, "−AacdFfhiklnRrStu")) != -1) {
+  while ((ch = getopt(argc, argv, "−AacdFfhiklnqRrSstuw1")) != -1) {
     switch (ch) {   /* Indent the switch. */
     case 'A':
       flag_A = 1;
@@ -316,6 +333,11 @@ main(int argc, char *argv[])
       flag_n = 1;
       break;
 
+    case 'q':
+      flag_q = 1;
+      flag_w = 0;
+      break;
+
     case 'R':
       flag_R = 1;
       break;
@@ -326,6 +348,10 @@ main(int argc, char *argv[])
 
     case 'S':
       sortype = SIZE_SORT;
+      break;
+
+    case 's':
+      flag_s = 1;
       break;
 
     case 't':
@@ -341,16 +367,14 @@ main(int argc, char *argv[])
       flag_c = 0;
       break;
 
-    // case '1':
-    //   errno = 0;
-    //   num = strtol(optarg, &ep, 10);
-    //   if (num <= 0 || *ep != '\0' || (errno == ERANGE &&
-    //       (num == LONG_MAX || num == LONG_MIN)) )
-    //     errx(1, "illegal number -- %s", optarg);
-    //   break;
-    // case 'd':
-      /* FALLTHROUGH */
-  
+    case 'w':
+      flag_w = 1;
+      flag_q = 0;
+      break;
+
+    case '1':
+      flag_1 = 1;
+
     default:
     case '?':
       usage();
@@ -365,6 +389,17 @@ main(int argc, char *argv[])
   /* 
    * Override Flags 
    */
+
+   if (isatty(STDOUT_FILENO)) {
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &sz) == 0 && sz.ws_col > 0)
+      t_width = sz.ws_col;
+    if(!flag_w)
+      flag_q = 1;
+  } else {
+    if(!flag_q)
+      flag_w = 1;
+    flag_1 = 1;
+  }
   
   /* sudo@UID:0 */
   if (!getuid())
