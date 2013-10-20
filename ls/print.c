@@ -39,6 +39,7 @@
 #include <grp.h>
 #include <math.h>
 #include <string.h>
+// #include <bsd/string.h>
 // #include <libutil.h>
 
 #include "print.h"
@@ -107,19 +108,19 @@ printhsize(off_t size)
   }
 
   if(size/1152921504606846976)
-    printf("%4lldE ", size/1152921504606846976);
+    printf("%4lldE ", (long long)size/1152921504606846976);
   else if(size/1125899906842624)
-    printf("%4lldP ", size/1125899906842624);
+    printf("%4lldP ", (long long)size/1125899906842624);
   else if(size/1099511627776)
-    printf("%4lldT ", size/1099511627776);
+    printf("%4lldT ", (long long)size/1099511627776);
   else if(size/1073741824)
-    printf("%4lldG ", size/1073741824);
+    printf("%4lldG ", (long long)size/1073741824);
   else if(size/1048576)
-    printf("%4lldM ", size/1048576);
+    printf("%4lldM ", (long long)size/1048576);
   else if(size/1024)
-    printf("%4lldK ", size/1024);
+    printf("%4lldK ", (long long)size/1024);
   else
-    printf("%4lldB ", size);
+    printf("%4lldB ", (long long)size);
 }
 
 void
@@ -128,18 +129,21 @@ printksize(off_t size)
   if(size != 0 && size/1024 == 0)
     printf("   1K ");
   else
-    printf("%4lldK ", size/1024);
+    printf("%4lldK ", (long long)size/1024);
 }
 
 void
 printindicator(mode_t md)
-{
-  printf( (S_ISLNK(md))   ? "@" :
-          (S_ISDIR(md))   ? "/" :
-          (md & S_IXOTH)  ? "*" :
-          (S_ISSOCK(md))  ? "=" :
-          (S_ISFIFO(md))  ? "|" :
-          (S_ISWHT(md))   ? "%%" :
+{ 
+  char buf[10];
+  (void)strmode(md, buf);
+
+  printf( buf[0]=='l'  ? "@" :
+          buf[0]=='d'  ? "/" :
+          buf[0]=='s'  ? "=" :
+          buf[0]=='p'  ? "|" :
+          buf[0]=='w'  ? "%%" :
+          ((S_IXUSR & md)||(S_IXGRP & md)||(S_IXOTH & md))  ? "*" :
           "?");
 }
 

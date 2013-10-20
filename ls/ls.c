@@ -84,8 +84,9 @@ int t_width;
 void
 usage()
 {
-  fprintf(stderr, "Usage: %s [ −AacdFfhiklnqRrSstuw1] [file . . .]\n",
-          getprogname());
+  // fprintf(stderr, "Usage: %s [ −AacdFfhiklnqRrSstuw1x] [file . . .]\n",
+  //         getprogname());
+  fprintf(stderr, "Usage: [ −AacdFfhiklnqRrSstuw1x] [file . . .]\n");
   exit(EXIT_FAILURE);
   /* NOTREACHED */
 }
@@ -126,10 +127,10 @@ display(FTSENT *p, FTSENT *list)
   maxblocks = maxnlink = maxuid = maxgid 
             = maxownerlen = maxgrouplen
             = maxsize = maxnamelen = 0;
-  int file_counter, display_row, display_column;
+  int file_counter, display_column;
   file_counter = 0;
-  display_row = display_column = 1;
-  int x_counter, C_counter;
+  display_column = 1;
+  int x_counter;
 
   // char* charp;
 
@@ -167,18 +168,17 @@ display(FTSENT *p, FTSENT *list)
     file_counter++;
   }
   if(flag_l || flag_n)
-    printf("total: %lld\n", total_b); 
+    printf("total: %lld\n", (long long)total_b); 
 
   /* -C -x */
   if((2*maxnamelen+2) > t_width)
     flag_1 = 1;
-  else {
+  else
     display_column = t_width/(maxnamelen+1)-2;
-    display_row = file_counter/display_column + 1;
-  }
-  printf("t_width: %d maxnamelen: %d display_column: %d\n", t_width, maxnamelen, display_column);
+    // display_row = file_counter/display_column + 1;
+  // printf("t_width: %d maxnamelen: %d display_column: %d\n", t_width, maxnamelen, display_column);
   x_counter = 0;
-  C_counter = 0;
+  // C_counter = 0;
 
   /* actually display */
   for (listp = list; listp; listp = listp->fts_link) {
@@ -189,7 +189,7 @@ display(FTSENT *p, FTSENT *list)
     }
     if(flag_l || flag_n) {
       if(flag_i)
-        printf("%lld ", listp->fts_statp->st_ino);
+        printf("%lld ", (long long)listp->fts_statp->st_ino);
       printmodes(listp->fts_statp->st_mode);
       maxprint(listp->fts_statp->st_nlink, maxnlink);
 
@@ -283,15 +283,23 @@ traverse(int argc, char *argv[], int p_options, int chp_options)
 
   while ((p = fts_read(ftsp)) != NULL) {
     switch (p->fts_info) {
+    case FTS_DC:
+      fprintf(stderr, "%s: directory causes a cycle", p->fts_name);
+      break;
+    case FTS_DNR:
+       /* FALLTHROUGH */
+    case FTS_ERR:
+      fprintf(stderr, "%s: %s", p->fts_name, strerror(p->fts_errno));
+      break;
     case FTS_D:
       if (!flag_R && p->fts_level != 0)
         break;
       if(flag_d) {
         if(flag_l || flag_n) {
           if(flag_i)
-            printf("%lld ", p->fts_statp->st_ino);
+            printf("%lld ", (long long)p->fts_statp->st_ino);
           printmodes(p->fts_statp->st_mode);
-          printf("  %2d ", p->fts_statp->st_nlink);
+          printf("  %2d ", (int)p->fts_statp->st_nlink);
     
           if(flag_n)
             printf("%d %d ", p->fts_statp->st_uid, p->fts_statp->st_gid);
@@ -306,7 +314,7 @@ traverse(int argc, char *argv[], int p_options, int chp_options)
           else if(flag_k)
             printksize(p->fts_statp->st_size);
           else 
-            printf("%6lld ", p->fts_statp->st_size);
+            printf("%6lld ", (long long)p->fts_statp->st_size);
           /* time */
           if(flag_u)
             printtime(p->fts_statp->st_atime);
@@ -352,12 +360,13 @@ main(int argc, char *argv[])
   int ch;
   int p_options;
   int chp_options;
+  p_options = chp_options = FTS_LOGICAL;
   struct winsize sz;
 
   // p_options = FTS_COMFOLLOW | FTS_LOGICAL | FTS_NOCHDIR;
 
   /* This works on BSD, but not in the stdlib on Linux. */
-  setprogname(argv[0]);
+  // setprogname(argv[0]);
 
    // "−AacdFfhiklnqRrSstuw1"
   while ((ch = getopt(argc, argv, "−AacdFfhiklnqRrSstuw1x")) != -1) {
@@ -382,6 +391,7 @@ main(int argc, char *argv[])
 
     case 'd':
       flag_d = 1;
+      chp_options = FTS_PHYSICAL;
       break;
 
     case 'F':
@@ -453,9 +463,11 @@ main(int argc, char *argv[])
 
     case '1':
       flag_1 = 1;
+      flag_x = 0;
 
     case 'x':
       flag_x = 1;
+      flag_1 = 0;
       break;
 
     default:
@@ -472,6 +484,8 @@ main(int argc, char *argv[])
   /* 
    * Override Flags 
    */
+   if(!flag_1)
+    flag_x = 1;
 
    if (isatty(STDOUT_FILENO)) {
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &sz) == 0 && sz.ws_col > 0)
