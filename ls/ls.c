@@ -286,11 +286,13 @@ traverse(int argc, char *argv[], int p_options, int chp_options)
     case FTS_DC:
       fprintf(stderr, "%s: directory causes a cycle", p->fts_name);
       break;
+
     case FTS_DNR:
        /* FALLTHROUGH */
     case FTS_ERR:
       fprintf(stderr, "%s: %s", p->fts_name, strerror(p->fts_errno));
       break;
+
     case FTS_D:
       if (!flag_R && p->fts_level != 0)
         break;
@@ -360,7 +362,7 @@ main(int argc, char *argv[])
   int ch;
   int p_options;
   int chp_options;
-  p_options = chp_options = FTS_LOGICAL;
+  p_options = chp_options = 0;
   struct winsize sz;
 
   // p_options = FTS_COMFOLLOW | FTS_LOGICAL | FTS_NOCHDIR;
