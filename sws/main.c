@@ -31,6 +31,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <errno.h>
+
 /*
  * Flags
  */
@@ -49,6 +53,32 @@ usage()
   /* NOTREACHED */
 }
 
+void
+dircheck(char *dir)
+{
+  struct stat dir_stat;
+
+  if (stat(dir, &dir_stat) == -1) {
+    if(errno == ENOENT) {
+      fprintf(stderr, "No such directory: %s\n", dir);
+      exit(EXIT_FAILURE);
+    }
+    else {
+      perror("Stat Error");
+      exit(EXIT_FAILURE);
+    }
+  } 
+
+  if(S_ISDIR(dir_stat.st_mode))
+    exit(EXIT_SUCCESS);
+  else {
+    fprintf(stderr, "Not a directory: %s\n", dir);
+    exit(EXIT_FAILURE);
+  }
+
+  // closedir(dir);
+}
+
 /*
  * Main
  */
@@ -56,7 +86,7 @@ int
 main(int argc, char *argv[])
 {
   int ch;
-  char *c_dir, *i_address, *l_file, *p_port, *sws_dir;
+  char *c_dir=NULL, *i_address=NULL, *l_file=NULL, *p_port=NULL, *sws_dir=NULL;
 
   printf("argc: %d  argv: %s\n", argc, *argv);
 
@@ -104,6 +134,14 @@ main(int argc, char *argv[])
   printf("argc: %d  argv: %s\n", argc, *argv);
   printf("c_dir: %s; i_address: %s; l_file: %s; p_port: %s; sws_dir: %s\n",
          c_dir, i_address, l_file, p_port, sws_dir);
+
+  /* Options Validation Check */
+  // if (c_dir != NULL)
+  //   dircheck(c_dir);
+  if (sws_dir != NULL)
+    dircheck(sws_dir);
+
+  
 
   return 0;
 }
