@@ -35,6 +35,8 @@
 #include <sys/stat.h>
 #include <errno.h>
 
+#include "net.h"
+
 /*
  * Flags
  */
@@ -86,7 +88,9 @@ int
 main(int argc, char *argv[])
 {
   int ch;
-  char *c_dir=NULL, *i_address=NULL, *l_file=NULL, *p_port=NULL, *sws_dir=NULL;
+  char *c_dir=NULL, *l_file=NULL, *sws_dir=NULL,
+       *i_address = "127.0.0.1";
+  int p_port = 8080;
 
   printf("argc: %d  argv: %s\n", argc, *argv);
 
@@ -116,7 +120,7 @@ main(int argc, char *argv[])
       break;
 
     case 'p':
-      p_port = argv[optind];
+      p_port = atoi(argv[optind]);
       optind++;
       break;
 
@@ -132,7 +136,7 @@ main(int argc, char *argv[])
 
   printf("flag_d: %d, flag_h: %d\n", flag_d, flag_h);
   printf("argc: %d  argv: %s\n", argc, *argv);
-  printf("c_dir: %s; i_address: %s; l_file: %s; p_port: %s; sws_dir: %s\n",
+  printf("c_dir: %s; i_address: %s; l_file: %s; p_port: %d; sws_dir: %s\n",
          c_dir, i_address, l_file, p_port, sws_dir);
 
   /* Options Validation Check */
@@ -141,7 +145,7 @@ main(int argc, char *argv[])
   if (sws_dir != NULL)
     dircheck(sws_dir);
 
-  
+  startsws(i_address, p_port);
 
   return 0;
 }
