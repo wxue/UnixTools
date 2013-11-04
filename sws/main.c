@@ -92,7 +92,7 @@ main(int argc, char *argv[])
        *i_address = "127.0.0.1";
   int p_port = 8080;
 
-  printf("argc: %d  argv: %s\n", argc, *argv);
+  // printf("argc: %d  argv: %s\n", argc, *argv);
 
   while ((ch = getopt(argc, argv, "-dhcilp")) != -1) {
     switch (ch) {
@@ -134,10 +134,10 @@ main(int argc, char *argv[])
 
   sws_dir = *argv;
 
-  printf("flag_d: %d, flag_h: %d\n", flag_d, flag_h);
-  printf("argc: %d  argv: %s\n", argc, *argv);
-  printf("c_dir: %s; i_address: %s; l_file: %s; p_port: %d; sws_dir: %s\n",
-         c_dir, i_address, l_file, p_port, sws_dir);
+  // printf("flag_d: %d, flag_h: %d\n", flag_d, flag_h);
+  // printf("argc: %d  argv: %s\n", argc, *argv);
+  // printf("c_dir: %s; i_address: %s; l_file: %s; p_port: %d; sws_dir: %s\n",
+  //        c_dir, i_address, l_file, p_port, sws_dir);
 
   /* Options Validation Check */
   // if (c_dir != NULL)

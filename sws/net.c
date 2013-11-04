@@ -46,8 +46,11 @@ startsws(char *i_address, int p_port)
   socklen_t addrlen;
   struct sockaddr_in address;
  
+  printf("\n-----------Starting Sever-----------\n");
   if ((socket_fd = socket(AF_INET, SOCK_STREAM, 0)) > 0) {
     printf("Socket created: %d\n", socket_fd);
+    printf("Binding socket ...\n");
+    printf("(Please re-run sws if pending a long time for socket binging.)\n\n");
   }
   
   /* SET socket address/host machine/port number */ 
@@ -57,7 +60,8 @@ startsws(char *i_address, int p_port)
 
   if (bind(socket_fd, (struct sockaddr *) &address, 
           sizeof(address)) == 0) {
-    printf("Binding Socket: %d | Port: %d | Address: %s \n\n", socket_fd, p_port, i_address);
+    printf("Socket Binding Completed:\n Socket: %d | Port: %d | Address: %s \n\n",
+           socket_fd, p_port, i_address);
   }
    
    
@@ -90,7 +94,7 @@ startsws(char *i_address, int p_port)
     }
     recv(newsocket_fd, buffer, bufsize, 0);
     printf("%s\n", buffer);
-    write(newsocket_fd, buffer, 12);
+    write(newsocket_fd, buffer, 100);
     close(newsocket_fd);
   }
   free(buffer);

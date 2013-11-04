@@ -25,4 +25,4 @@ in the UNIX Environment, Fall 2013, SIT.
 
 2. Options Validation Check: still at "rudimentary" stage
 
-3. Client~INFO may not be displayed correctly occasionally.
+3. Client~INFO may not be displayed correctly occasionally when using telnet to connect. (Web browser connection behaved better.)
