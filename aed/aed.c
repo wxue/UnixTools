@@ -1,4 +1,4 @@
-/* $NetBSD: aed.c,v 1.02 2013/12/09 05:31:01 Weiyu Exp $ */
+/* $NetBSD: aed.c,v 1.03 2013/12/09 18:55:41 Weiyu Exp $ */
  
 /* Copyright (c) 2013, Weiyu Xue
  * All rights reserved.
@@ -30,19 +30,40 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <string.h>
 #include <errno.h>
+#include <string.h>
+#include <ctype.h>
+#include <sys/types.h>
 
-#include <readpassphrase.h>
+// #include <bsd/unistd.h>
+#include <bsd/readpassphrase.h>
 #include <openssl/evp.h>
+#include <sys/file.h>
+
+// #if defined(__APPLE__) && defined(__MACH__)
+//   #include <readpassphrase.h>
+//   #define COMMON_DIGEST_FOR_OPENSSL
+//   #include <CommonCrypto/CommonDigest.h>
+//   #define SHA1 CC_SHA1
+
+//   #include <CommonCrypto/CommonHMAC.h>
+//   #define HMAC CCHmac
+
+// #else
+//   #include <bsd/readpassphrase.h>
+//   #include <openssl/evp.h>
+// #endif
 
 #define MAXPASSLEN 64
+#define INITIAL -1
+#define ENCRYPTION 1
+#define DECRYPTION 0
+#define BUFSIZE 256 /* multiple of the block size */
 
 /*
  * Flags & Global Variables
  */
-int flag_d = 0;
-int flag_e = 0;
+int task_type = INITIAL;
 
 char *passphrase = NULL;
 
@@ -60,13 +81,22 @@ usage()
 int
 passphrasecheck()
 {
+  int ttyfd;
   char *passbuf;
   char passbuf_re[MAXPASSLEN];
   if ((passbuf = (char*)malloc(MAXPASSLEN*sizeof(char))) == NULL)
     fprintf(stderr, "Unable to allocate memory: %s\n",
             strerror(errno));
+  if ((ttyfd=open("/dev/tty", O_RDWR)) < 0) {
+    perror("open tty: ");
+    exit(EXIT_FAILURE);
+  }
+  if (flock(ttyfd, LOCK_EX) != 0) {
+    perror("flock: ");
+    exit(EXIT_FAILURE);
+  }
   /* 
-   * Prompt the user for appropriate passphrase(if the −p ﬂag was not speciﬁed)
+   * Prompt the user for appropriate passphrase(if the −p ﬂag was not specified)
    */
   while (passphrase == NULL) {
     if (readpassphrase("Please enter your passphrase: ", passbuf, 
@@ -78,6 +108,10 @@ passphrasecheck()
       memset(passbuf, 0, strlen(passbuf));
       return 1; /* Need to run this function again */
     }
+    if (task_type == DECRYPTION) {
+      passphrase = passbuf;
+      break;
+    }
     if (readpassphrase("Please re-enter your passphrase: ", passbuf_re, 
         sizeof(passbuf_re), RPP_REQUIRE_TTY) == NULL)
       fprintf(stderr, "Error: Unable to read passphrase");
@@ -85,7 +119,11 @@ passphrasecheck()
     if (strcmp(passbuf, passbuf_re) == 0)
       passphrase = passbuf;
   }
-
+  if (flock(ttyfd, LOCK_UN) != 0) {
+    perror("flock: ");
+    exit(EXIT_FAILURE);
+  }
+  (void)close(ttyfd);
   if (strlen(passphrase) > MAXPASSLEN) {
     fprintf(stderr, "Passphrase should be no more than %d characters\n", 
               MAXPASSLEN);
@@ -93,6 +131,19 @@ passphrasecheck()
     return 1;
   }
   
+  return 0;
+}
+
+int
+saltcheck(char *salt)
+{
+  int i;
+  if (strlen(salt) != 8)
+    return 1;
+  for (i=0; i<strlen(salt); i++) {
+    if (!isxdigit(salt[i]))
+      return 1;
+  }
   return 0;
 }
 /*
@@ -104,15 +155,23 @@ passphrasecheck()
   int ch;
   char *salt;
   salt = NULL;
+  unsigned char key[EVP_MAX_KEY_LENGTH], iv[EVP_MAX_IV_LENGTH];
+  EVP_CIPHER_CTX ctx;
+  int buflen, buflen_final;
+  unsigned char buf_raw[BUFSIZE], buf[BUFSIZE*2];
+  int readlen = 0;
+
+  /* prevents leaking the data into the process table */
+  // setproctitle("%s", argv[0]);
 
   while ((ch = getopt(argc, argv, "dehp:s:")) != -1) {
     switch (ch) {
     case 'd':
-      flag_d = 1;
+      task_type = DECRYPTION;
       break;
 
     case 'e':
-      flag_e = 1;
+      task_type = ENCRYPTION;
       break;
 
     case 'p':
@@ -121,8 +180,6 @@ passphrasecheck()
 
     case 's':
       salt = optarg;
-      // if (saltcheck(salt))
-      //   exit(EXIT_FAILURE);
       break;
 
     default:
@@ -135,21 +192,67 @@ passphrasecheck()
   argv += optind;
 
   /* Validation Check */
-
+  if (task_type == INITIAL) {
+    fprintf(stderr, "Decryption/Encryption is not specified\n");
+    usage();
+  }
   while (passphrasecheck());
 
+  if ((salt!=NULL) && saltcheck(salt)) {
+    fprintf(stderr, "The salt needs to be exactly 8 hexadecimal characters\n");
+    exit(EXIT_FAILURE);
+  }
+
+  /* Encryption and Decryption */
+  if(EVP_BytesToKey(EVP_aes_256_cbc(), EVP_sha1(), (unsigned char*)salt, (unsigned char*)passphrase, 
+                    MAXPASSLEN, 1, key, iv) == 0)
+    fprintf(stderr, "EVP_BytesToKey Error\n");
+
+  while ((readlen = read(STDIN_FILENO, buf_raw, BUFSIZE)) != 0) {
+    EVP_CIPHER_CTX_init(&ctx);
+    EVP_CIPHER_CTX_set_padding(&ctx, task_type);
+    if (EVP_CipherInit_ex(&ctx, EVP_aes_256_cbc(), NULL, key, iv, task_type) == 0) {
+      fprintf(stderr, "EVP_CipherInit_ex Error\n");
+      exit(EXIT_FAILURE);
+    }
+    if (EVP_CipherUpdate(&ctx, buf, &buflen, buf_raw, readlen) == 0) {
+      fprintf(stderr, "EVP_CipherUpdate Error\n");      
+      exit(EXIT_FAILURE);
+    }
+    if (readlen == BUFSIZE) {
+      if (write(STDOUT_FILENO, buf, buflen) != buflen) {
+        perror("write: ");
+        exit(EXIT_FAILURE);
+      }
+      EVP_CIPHER_CTX_cleanup(&ctx);
+    }
+  }
+  if (EVP_CipherFinal_ex(&ctx, buf+buflen, &buflen_final) == 0) {
+    if (task_type == ENCRYPTION)
+      fprintf(stderr, "Encryption: EVP_CipherFinal_ex Error\n");
+    else
+      fprintf(stderr, "Decryption: EVP_CipherFinal_ex Error\n");
+    exit(EXIT_FAILURE);
+  }
+  if (write(STDOUT_FILENO, buf, buflen+buflen_final) != buflen+buflen_final) {
+    perror("write: ");
+    exit(EXIT_FAILURE);
+  }
+  EVP_CIPHER_CTX_cleanup(&ctx);
 
 /******************TESTING********/
-  if (flag_d)
-    printf("flag_d: ON\n");
-  else
-    printf("flag_d: OFF\n");
-  if (flag_e)
-    printf("flag_e: ON\n");
-  else
-    printf("flag_e: OFF\n");
-  (void)printf("passphrase: %s\n", passphrase);
-  printf("salt: %s\n", salt);
+  // if (task_type == DECRYPTION)
+  //   printf("flag_d: ON\n");
+  // else
+  //   printf("flag_d: OFF\n");
+  // if (task_type == ENCRYPTION)
+  //   printf("flag_e: ON\n");
+  // else
+  //   printf("flag_e: OFF\n");
+  // (void)printf("passphrase: %s\n", passphrase);
+  // printf("salt: %s\n", salt);
+  // for (i=0; i<32; i++)
+  //   printf("key[%d]: %x\n", i, key[i]);
 /************END OF TESTING*******/
 
   return 0;
