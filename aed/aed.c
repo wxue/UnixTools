@@ -1,4 +1,4 @@
-/* $NetBSD: aed.c,v 0.01 2013/12/06 16:19:25 Weiyu Exp $ */
+/* $NetBSD: aed.c,v 1.02 2013/12/09 05:31:01 Weiyu Exp $ */
  
 /* Copyright (c) 2013, Weiyu Xue
  * All rights reserved.
@@ -30,13 +30,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <errno.h>
 
+#include <readpassphrase.h>
+#include <openssl/evp.h>
+
+#define MAXPASSLEN 64
+
 /*
- * Flags
+ * Flags & Global Variables
  */
 int flag_d = 0;
 int flag_e = 0;
+
+char *passphrase = NULL;
 
  /*
  * Functions
@@ -49,6 +57,44 @@ usage()
   /* NOTREACHED */
 }
 
+int
+passphrasecheck()
+{
+  char *passbuf;
+  char passbuf_re[MAXPASSLEN];
+  if ((passbuf = (char*)malloc(MAXPASSLEN*sizeof(char))) == NULL)
+    fprintf(stderr, "Unable to allocate memory: %s\n",
+            strerror(errno));
+  /* 
+   * Prompt the user for appropriate passphrase(if the −p ﬂag was not speciﬁed)
+   */
+  while (passphrase == NULL) {
+    if (readpassphrase("Please enter your passphrase: ", passbuf, 
+        sizeof(passbuf), RPP_REQUIRE_TTY) == NULL)
+      fprintf(stderr, "Error: Unable to read passphrase");
+    if (strlen(passbuf) > MAXPASSLEN) {
+      fprintf(stderr, "Passphrase should be no more than %d characters\n", 
+              MAXPASSLEN);
+      memset(passbuf, 0, strlen(passbuf));
+      return 1; /* Need to run this function again */
+    }
+    if (readpassphrase("Please re-enter your passphrase: ", passbuf_re, 
+        sizeof(passbuf_re), RPP_REQUIRE_TTY) == NULL)
+      fprintf(stderr, "Error: Unable to read passphrase");
+    /* Passphrase Match */
+    if (strcmp(passbuf, passbuf_re) == 0)
+      passphrase = passbuf;
+  }
+
+  if (strlen(passphrase) > MAXPASSLEN) {
+    fprintf(stderr, "Passphrase should be no more than %d characters\n", 
+              MAXPASSLEN);
+    passphrase = NULL;
+    return 1;
+  }
+  
+  return 0;
+}
 /*
  * Main
  */
@@ -56,8 +102,7 @@ usage()
  main(int argc, char *argv[])
  {
   int ch;
-  char *passphrase, *salt;
-  passphrase = NULL;
+  char *salt;
   salt = NULL;
 
   while ((ch = getopt(argc, argv, "dehp:s:")) != -1) {
@@ -72,8 +117,6 @@ usage()
 
     case 'p':
       passphrase = optarg;
-      // if(passphrasecheck(passphrase))
-      //   exit(EXIT_FAILURE);
       break;
 
     case 's':
@@ -90,6 +133,12 @@ usage()
   }
   argc -= optind;
   argv += optind;
+
+  /* Validation Check */
+
+  while (passphrasecheck());
+
+
 /******************TESTING********/
   if (flag_d)
     printf("flag_d: ON\n");
@@ -99,7 +148,7 @@ usage()
     printf("flag_e: ON\n");
   else
     printf("flag_e: OFF\n");
-  printf("passphrase: %s\n", passphrase);
+  (void)printf("passphrase: %s\n", passphrase);
   printf("salt: %s\n", salt);
 /************END OF TESTING*******/
 
