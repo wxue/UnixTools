@@ -1,4 +1,4 @@
-/* $NetBSD: aed.c,v 1.03 2013/12/09 18:55:41 Weiyu Exp $ */
+/* $NetBSD: aed.c,v 1.04 2013/12/09 19:30:00 Weiyu Exp $ */
  
 /* Copyright (c) 2013, Weiyu Xue
  * All rights reserved.
@@ -84,9 +84,11 @@ passphrasecheck()
   int ttyfd;
   char *passbuf;
   char passbuf_re[MAXPASSLEN];
-  if ((passbuf = (char*)malloc(MAXPASSLEN*sizeof(char))) == NULL)
+  if ((passbuf = (char*)malloc(MAXPASSLEN*sizeof(char))) == NULL) {
     fprintf(stderr, "Unable to allocate memory: %s\n",
             strerror(errno));
+    exit(EXIT_FAILURE);
+  }
   if ((ttyfd=open("/dev/tty", O_RDWR)) < 0) {
     perror("open tty: ");
     exit(EXIT_FAILURE);
@@ -146,6 +148,26 @@ saltcheck(char *salt)
   }
   return 0;
 }
+
+int
+asteriskpassphrase()
+{
+  int i;
+  char *asteriskbuf;
+  if ((asteriskbuf = (char*)malloc((MAXPASSLEN+1)*sizeof(char))) == NULL) {
+    fprintf(stderr, "Unable to allocate memory: %s\n",
+            strerror(errno));
+    return 1;
+  }
+
+  for (i=0; i<strlen(passphrase); i++) {
+    asteriskbuf[i] = passphrase[i];
+    passphrase[i] = '*';
+  }
+  asteriskbuf[i] = '\0';
+  passphrase = asteriskbuf;
+ return 0;
+}
 /*
  * Main
  */
@@ -197,6 +219,11 @@ saltcheck(char *salt)
     usage();
   }
   while (passphrasecheck());
+  /* prevents leaking the data into the process table */
+  if (asteriskpassphrase()) {
+    fprintf(stderr, "Asterisk passphrase error\n");
+    exit(EXIT_FAILURE);
+  }
 
   if ((salt!=NULL) && saltcheck(salt)) {
     fprintf(stderr, "The salt needs to be exactly 8 hexadecimal characters\n");
@@ -249,7 +276,7 @@ saltcheck(char *salt)
   //   printf("flag_e: ON\n");
   // else
   //   printf("flag_e: OFF\n");
-  // (void)printf("passphrase: %s\n", passphrase);
+  // printf("passphrase: %s\n", passphrase);
   // printf("salt: %s\n", salt);
   // for (i=0; i<32; i++)
   //   printf("key[%d]: %x\n", i, key[i]);
