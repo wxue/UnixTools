@@ -51,7 +51,7 @@ you need to do this again.
 
 ## LICENSE
 
-The code were written by Weiyu Xue < [Email:T-Wind@xiakelite.com](mailto:T-Wind@xiakelite.com) >, base on Jan Schaumann's class at Stevens Institue of Technonlogy and the well-known book by W. Richard Stevens.
+The code were written by Weiyu Xue < [Email:wxue2012@gmail.com](mailto:wxue2012@gmail.com) >, base on Jan Schaumann's class at Stevens Institue of Technonlogy and the well-known book by W. Richard Stevens.
 
 > Copyright (c) 2013, Weiyu Xue
 All rights reserved.
